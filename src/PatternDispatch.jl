@@ -42,8 +42,10 @@ function code_pattern(ex)
     @show sig
     p_ex = recode(psig)
     @show p_ex
-    println()
     
+    quote
+        println($p_ex,'\n')
+    end
 end
 
 type Recode
@@ -57,7 +59,7 @@ function recode(ex::Expr)
     recode(r, quot(Arg()), ex)
     quote
         $(r.code...)
-        {$(r.guards...)}
+        Pattern(Set{Guard}($(r.guards...)))
     end
 end
 
@@ -69,9 +71,9 @@ function recode(c::Recode, arg, ex::Expr)
     if head === :(::)
         @assert 1 <= nargs <= 2
         if nargs == 1
-            push(c.guards, :( TypeAssert($arg, $(args[1])) ))
+            push(c.guards, :( TypeAssert($arg, $(esc(args[1]))) ))
         else
-            push(c.guards, :( TypeAssert($arg, $(args[2])) ))
+            push(c.guards, :( TypeAssert($arg, $(esc(args[2]))) ))
             recode(c, arg, args[1])
         end
     elseif head === :tuple
