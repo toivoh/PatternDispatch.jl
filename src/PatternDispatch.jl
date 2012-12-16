@@ -84,7 +84,7 @@ type Ctx
 end
 
 emit(c::Ctx, ex) = (push(c.code, ex); nothing)
-emit_guard(c::Ctx, ex) = emit(c, :( if !$ex; return false; end ))
+emit_guard(c::Ctx, ex) = emit(c, :( if !$ex; return (false,nothing); end ))
 
 function code_match(p::Pattern)
     c = Ctx()
@@ -109,9 +109,9 @@ code_val(c::Ctx, v::TupleRef) = :( $(code_match(c,v.arg))[$(v.index)] )
 
 function code_match(c::Ctx, g::Bind)
     if has(c.bound, g.name)
-        emit_guard(c, :( is($(code_match(c,g.arg)), $(esc(g.name))) ))
+        emit_guard(c, :( is($(code_match(c,g.arg)), $(g.name)) ))
     else
-        emit(c, :( $(esc(g.name)) = $(code_match(c,g.arg)) ))
+        emit(c, :( $(g.name) = $(code_match(c,g.arg)) ))
     end
 end
 code_match(c::Ctx, g::Guard) = emit_guard(c, code_pred(c, g))
@@ -127,8 +127,29 @@ end
 # ==== MethodTable ============================================================
 
 type MethodTable
+    name::Symbol
+    methods::Vector{Function}
+    MethodTable(name::Symbol) = new(name, Function[])
 end
 
+add(mt::MethodTable, m::Function) = (push(mt.methods, m); nothing)
+
+function dispatch(mt::MethodTable, args::Tuple)
+    for m in mt.methods
+        matched, result = m(args)
+        if matched; return result; end
+    end
+    error("No matching method found for pattern function $(mt.name)")
+end
+
+
+function create_method(p::Pattern, body)
+    code = code_match(p)
+    @eval $argsym->begin
+        $(code)
+        (true, $body)
+    end
+end
 
 # ==== @pattern ===============================================================
 
@@ -143,18 +164,10 @@ function code_pattern(ex)
     @expect is_expr(sig, :call)
     fname, args = sig.args[1], sig.args[2:end]
     psig = :($(args...),)
-    #@show sig
     p_ex = recode(psig)
-    #@show p_ex
     
     f = esc(fname)
-    quote
-        p = $p_ex
-        #println(p)
-        code = code_match(p)
-        #println(code)
-        #println()
-        
+    quote       
         wasbound = try
             f = $f
             true
@@ -163,8 +176,8 @@ function code_pattern(ex)
         end
 
         if !wasbound
-            mt = MethodTable()
-            const $f = args->dispatch(mt, args)
+            mt = MethodTable($(quot(fname)))
+            const $f = (args...)->dispatch(mt, args)
             method_tables[$f] = mt
             println($("$fname was unbound"))
         else
@@ -174,6 +187,9 @@ function code_pattern(ex)
             mt = method_tables[$f]
             println($("$fname was a pattern function"))
         end
+
+        method = create_method($p_ex, $(quot(body)))
+        add(mt, method)
     end
 end
 
