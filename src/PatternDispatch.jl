@@ -124,7 +124,15 @@ function code_pred(c::Ctx, g::IsTuple)
 end
 
 
+# ==== MethodTable ============================================================
+
+type MethodTable
+end
+
+
 # ==== @pattern ===============================================================
+
+const method_tables = Dict{Function, MethodTable}()
 
 macro pattern(ex)
     code_pattern(ex)
@@ -135,16 +143,37 @@ function code_pattern(ex)
     @expect is_expr(sig, :call)
     fname, args = sig.args[1], sig.args[2:end]
     psig = :($(args...),)
-    @show sig
+    #@show sig
     p_ex = recode(psig)
-    @show p_ex
+    #@show p_ex
     
+    f = esc(fname)
     quote
         p = $p_ex
-        println(p)
+        #println(p)
         code = code_match(p)
-        println(code)
-        println()
+        #println(code)
+        #println()
+        
+        wasbound = try
+            f = $f
+            true
+        catch e
+            false
+        end
+
+        if !wasbound
+            mt = MethodTable()
+            const $f = args->dispatch(mt, args)
+            method_tables[$f] = mt
+            println($("$fname was unbound"))
+        else
+            if !has(method_tables, $f)
+                error($("$fname is not a pattern function"))
+            end
+            mt = method_tables[$f]
+            println($("$fname was a pattern function"))
+        end
     end
 end
 
