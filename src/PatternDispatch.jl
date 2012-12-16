@@ -23,82 +23,13 @@ const argsym  = gensym("arg")
 @immutable type TypeAssert <: Guard;  arg::Value; typ;           end
 @immutable type IsTuple    <: Guard;  arg::Value; n::Int;        end
 
-type Ctx
-    code::Vector
-    values::Dict{Value,Symbol}
-    bound::Set{Symbol}
-    Ctx() = new({}, Dict{Value,Symbol}(), Set{Symbol}())
-end
-
-emit(c::Ctx, ex) = (push(c.code, ex); nothing)
-emit_guard(c::Ctx, ex) = emit(c, :( if !$ex; return false; end ))
-
-function code_match(c::Ctx, v::Value)
-    if has(c.values, v)
-        c.values[v]
-    else
-        val = gensym("v")
-        emit(c, :( $val = $(code_val(c, v)) ))
-        c.values[v] = val
-    end
-end
-
-code_val(c::Ctx, v::Arg)      = argsym
-code_val(c::Ctx, v::TupleRef) = :( $(code_match(c,v.arg))[$(v.index)] )
-
-function code_match(c::Ctx, g::Bind)
-    if has(c.bound, g.name)
-        emit_guard(c, :( is($(code_match(c,g.arg)), $(esc(g.name))) ))
-    else
-        emit(c, :( $(esc(g.name)) = $(code_match(c,g.arg)) ))
-    end
-end
-code_match(c::Ctx, g::Guard) = emit_guard(c, code_pred(c, g))
-
-code_pred(c::Ctx,g::Egal)      = :(is($(code_match(c,g.arg)),$(quot(g.value))))
-code_pred(c::Ctx,g::TypeAssert)= :(isa($(code_match(c,g.arg)),$(quot(g.typ))))
-function code_pred(c::Ctx, g::IsTuple)
-    r = code_match(c, g.arg)
-    :( isa($r, Tuple) && length($r) == $(g.n) )
-end
-
-
 
 type Pattern
     guards::Vector{Guard}
 end
 
-function code_match(p::Pattern)
-    c = Ctx()
-    for g in p.guards
-        code_match(c, g)
-    end
-    quote; $(c.code...); end
-end
 
-
-
-macro pattern(ex)
-    code_pattern(ex)
-end
-
-function code_pattern(ex)
-    sig, body = split_fdef(ex)
-    @expect is_expr(sig, :call)
-    fname, args = sig.args[1], sig.args[2:end]
-    psig = :($(args...),)
-    @show sig
-    p_ex = recode(psig)
-    @show p_ex
-    
-    quote
-        p = $p_ex
-        println(p)
-        code = code_match(p)
-        println(code)
-        println()
-    end
-end
+# ==== recode: function signature -> Pattern creating AST =====================
 
 type Recode
     code::Vector
@@ -142,5 +73,79 @@ function recode(c::Recode, arg, ex::Expr)
     end
 end
 
+
+# ==== code_match: Pattern -> matching code ===================================
+
+type Ctx
+    code::Vector
+    values::Dict{Value,Symbol}
+    bound::Set{Symbol}
+    Ctx() = new({}, Dict{Value,Symbol}(), Set{Symbol}())
+end
+
+emit(c::Ctx, ex) = (push(c.code, ex); nothing)
+emit_guard(c::Ctx, ex) = emit(c, :( if !$ex; return false; end ))
+
+function code_match(p::Pattern)
+    c = Ctx()
+    for g in p.guards
+        code_match(c, g)
+    end
+    quote; $(c.code...); end
+end
+
+function code_match(c::Ctx, v::Value)
+    if has(c.values, v)
+        c.values[v]
+    else
+        val = gensym("v")
+        emit(c, :( $val = $(code_val(c, v)) ))
+        c.values[v] = val
+    end
+end
+
+code_val(c::Ctx, v::Arg)      = argsym
+code_val(c::Ctx, v::TupleRef) = :( $(code_match(c,v.arg))[$(v.index)] )
+
+function code_match(c::Ctx, g::Bind)
+    if has(c.bound, g.name)
+        emit_guard(c, :( is($(code_match(c,g.arg)), $(esc(g.name))) ))
+    else
+        emit(c, :( $(esc(g.name)) = $(code_match(c,g.arg)) ))
+    end
+end
+code_match(c::Ctx, g::Guard) = emit_guard(c, code_pred(c, g))
+
+code_pred(c::Ctx,g::Egal)      = :(is($(code_match(c,g.arg)),$(quot(g.value))))
+code_pred(c::Ctx,g::TypeAssert)= :(isa($(code_match(c,g.arg)),$(quot(g.typ))))
+function code_pred(c::Ctx, g::IsTuple)
+    r = code_match(c, g.arg)
+    :( isa($r, Tuple) && length($r) == $(g.n) )
+end
+
+
+# ==== @pattern ===============================================================
+
+macro pattern(ex)
+    code_pattern(ex)
+end
+
+function code_pattern(ex)
+    sig, body = split_fdef(ex)
+    @expect is_expr(sig, :call)
+    fname, args = sig.args[1], sig.args[2:end]
+    psig = :($(args...),)
+    @show sig
+    p_ex = recode(psig)
+    @show p_ex
+    
+    quote
+        p = $p_ex
+        println(p)
+        code = code_match(p)
+        println(code)
+        println()
+    end
+end
 
 end # module
