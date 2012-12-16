@@ -3,8 +3,9 @@ load("Debug.jl")
 
 module PatternDispatch
 using Toivo, Debug
+import Base.&, Base.isequal, Base.>=, Base.>, Base.<=, Base.<
 export @immutable, @get!
-export @pattern
+export @pattern, @qpat, @spat, simplify, unbind
 
 include(find_in_path("PatternDispatch/src/immutable.jl"))
 
@@ -13,7 +14,7 @@ abstract Node
 abstract Value <: Node
 abstract Guard <: Node
 
-type Arg      <: Value; end
+type Arg <: Value; end
 const argnode = Arg()
 const argsym  = gensym("arg")
 
@@ -21,11 +22,14 @@ const argsym  = gensym("arg")
 @immutable type Bind     <: Guard;  arg::Value; name::Symbol;  end
 @immutable type Egal     <: Guard;  arg::Value; value;         end
 @immutable type Isa      <: Guard;  arg::Value; typ;           end
-
+type Never <: Guard; end
+const never = Never()
 
 type Pattern
     guards::Vector{Guard}
 end
+
+const nullpat = Pattern(Guard[never])
 
 
 # ==== recode: function signature -> Pattern creating AST =====================
@@ -36,7 +40,7 @@ type Recode
     Recode() = new({}, {})
 end
 
-function recode(ex::Expr)
+function recode(ex)
     r = Recode()
     recode(r, quot(Arg()), ex)
     quote
@@ -71,6 +75,65 @@ function recode(c::Recode, arg, ex::Expr)
         error("recode: unimplemented: ex = $ex")
     end
 end
+
+
+# ==== simplify ===============================================================
+
+(&)(e::Egal, f::Egal)= (@assert e.arg===f.arg; e.value===f.value ?   e : never)
+(&)(e::Egal, t::Isa) = (@assert e.arg===t.arg; isa(e.value, t.typ) ? e : never)
+(&)(t::Isa, e::Egal) = e & t
+function (&)(s::Isa, t::Isa) 
+    @assert s.arg===t.arg
+    T = tintersect(s.typ, t.typ)
+    T === None ? never : Isa(s.arg, T)
+end
+
+function simplify(p::Pattern)
+    # several Egal on same node
+    # several Isa  on same node
+    # Isa on nodes with Egal on them
+
+    gs = Dict{Value,Guard}()
+    for g in p.guards
+        if !isa(g, Bind)
+            node = g.arg
+            new_g = has(gs, node) ? (g & gs[node]) : g
+            if new_g === never
+                return nullpat
+            end
+            gs[node] = new_g
+        end
+    end
+    guards = Guard[]
+    for g in p.guards
+        if isa(g, Bind)
+            push(guards, g)
+        else
+            node = g.arg
+            if has(gs, node)
+                push(guards, gs[node])
+                del(gs, node)
+            end
+        end
+    end
+
+    Pattern(guards)
+end
+
+(&)(p::Pattern, q::Pattern) = simplify(Pattern([p.guards, q.guards]))
+
+unbind(p::Pattern) = Pattern(Guard[filter(g->!isa(g,Bind), p.guards)...])
+
+function isequal(p::Pattern, q::Pattern)
+    p, q = simplify(p), simplify(q)
+    return Set{Guard}(p.guards...) == Set{Guard}(q.guards...)
+end
+
+>=(p::Pattern, q::Pattern) = (p & q) == q
+>(p::Pattern, q::Pattern)  = (p >= q) && (p != q)
+
+<=(p::Pattern, q::Pattern) = q >= p
+<(p::Pattern, q::Pattern)  = q >  p
 
 
 # ==== code_match: Pattern -> matching code ===================================
@@ -185,6 +248,15 @@ function code_pattern(ex)
 
         method = create_method($p_ex, $(quot(body)))
         add(mt, method)
+    end
+end
+
+macro qpat(ex)
+    recode(ex)
+end
+macro spat(ex)
+    quote
+        simplify($(recode(ex)))
     end
 end
 
