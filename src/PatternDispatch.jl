@@ -21,7 +21,6 @@ const argsym  = gensym("arg")
 @immutable type Bind       <: Guard;  arg::Value; name::Symbol;  end
 @immutable type Egal       <: Guard;  arg::Value; value;         end
 @immutable type TypeAssert <: Guard;  arg::Value; typ;           end
-@immutable type IsTuple    <: Guard;  arg::Value; n::Int;        end
 
 
 type Pattern
@@ -60,7 +59,7 @@ function recode(c::Recode, arg, ex::Expr)
             recode(c, arg, args[1])
         end
     elseif head === :tuple
-        push(c.guards, :( IsTuple($arg, $nargs) ))
+        push(c.guards, :( TypeAssert($arg, $(quot(NTuple{nargs,Any}))) ))
         for (k, p) in enumerate(args)
             node = gensym("e$k")
             push(c.code, :( $node = TupleRef($arg, $k) ))
@@ -118,10 +117,6 @@ code_match(c::Ctx, g::Guard) = emit_guard(c, code_pred(c, g))
 
 code_pred(c::Ctx,g::Egal)      = :(is($(code_match(c,g.arg)),$(quot(g.value))))
 code_pred(c::Ctx,g::TypeAssert)= :(isa($(code_match(c,g.arg)),$(quot(g.typ))))
-function code_pred(c::Ctx, g::IsTuple)
-    r = code_match(c, g.arg)
-    :( isa($r, Tuple) && length($r) == $(g.n) )
-end
 
 
 # ==== MethodTable ============================================================
