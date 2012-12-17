@@ -49,6 +49,8 @@ const nullpat = Pattern((Node=>Guard)[argnode => never], Set{Bind}())
 function make_pattern(nodes::Node...)
     gs, bs = Dict{Node,Guard}(), Set{Bind}()
     for node in nodes
+        if isa(node, Never); return nullpat; end
+
         if isa(node, Bind); add(bs, node)
         else
             arg = node.arg
