@@ -81,13 +81,11 @@ function code_pattern(ex)
             mt = MethodTable($(quot(fname)))
             const $f = (args...)->dispatch(mt, args)
             method_tables[$f] = mt
-            println($("$fname was unbound"))
         else
             if !has(method_tables, $f)
                 error($("$fname is not a pattern function"))
             end
             mt = method_tables[$f]
-            println($("$fname was a pattern function"))
         end
 
         method = create_method($p_ex, $(quot(body)))
