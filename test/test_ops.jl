@@ -18,4 +18,9 @@ unordered(x,y) = !(x >= y || y >= x)
 @assert unordered((@qpat (x::Int,y)), (@qpat (x,y::Int)))
 @assert (@qpat (x::Number,y)) > (@qpat (x::Int,y::Int))
 
+@assert (@qpat 1::Float64) == nullpat
+@assert (@qpat x::Any) == (@qpat x)
+@assert (@qpat (x::None,z)) == nullpat
+@assert (@qpat (x,y)::Tuple) == (@qpat (x,y))
+
 end
