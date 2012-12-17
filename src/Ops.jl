@@ -7,15 +7,6 @@ export simplify, unbind
 
 # ==== simplify ===============================================================
 
-(&)(e::Egal, f::Egal)= (@assert e.arg===f.arg; e.value===f.value ?   e : never)
-(&)(e::Egal, t::Isa) = (@assert e.arg===t.arg; isa(e.value, t.typ) ? e : never)
-(&)(t::Isa, e::Egal) = e & t
-function (&)(s::Isa, t::Isa) 
-    @assert s.arg===t.arg
-    T = tintersect(s.typ, t.typ)
-    T === None ? never : Isa(s.arg, T)
-end
-
 function simplify(p::Pattern)
     # several Egal on same node
     # several Isa  on same node
