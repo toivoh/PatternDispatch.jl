@@ -5,17 +5,18 @@ using Graph, Toivo
 export code_match
 
 type Ctx
+    p::Pattern
     code::Vector
     results::Dict{Node,Any}
     bound::Set{Symbol}
-    Ctx() = new({}, Dict{Node,Any}(), Set{Symbol}())
+    Ctx(p::Pattern) = new(p, {}, Dict{Node,Any}(), Set{Symbol}())
 end
 
 emit(c::Ctx, ex) = (push(c.code, ex); nothing)
 emit_guard(c::Ctx, ex) = emit(c, :( if !$ex; return (false,nothing); end ))
 
 function code_match(p::Pattern)
-    c = Ctx()
+    c = Ctx(p)
     for g in values(p.guards); evaluate(c, g); end
     for b in p.bindings;       evaluate(c, b); end
     quote; $(c.code...); end
@@ -36,9 +37,15 @@ function evaluate(c::Ctx, node::Node)
     end
 end
 
-code_match(c::Ctx, v::Arg)      = argsym
-code_match(c::Ctx, v::TupleRef) = :( $(evaluate(c,v.arg))[$(v.index)] )
+evalguardof(c::Ctx, node::Value) = evaluate(c, c.p.guards[node])
 
+
+code_match(c::Ctx, v::Arg) = argsym
+function code_match(c::Ctx, v::TupleRef) 
+    evalguardof(c, v.arg)
+    :( $(evaluate(c,v.arg))[$(v.index)] )
+end
+    
 function code_match(c::Ctx, g::Bind)
     if has(c.bound, g.name)
         emit_guard(c, :( is($(evaluate(c,g.arg)), $(g.name)) ))
