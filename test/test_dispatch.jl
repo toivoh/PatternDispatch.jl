@@ -19,8 +19,8 @@ using PatternDispatch
 
 
 @pattern h(x,(y,z)) = [x,y,z]
-@pattern h((x,y),z) = [x,y,z]
 @pattern h((x,y),(z,w)) = [x,y,z,w]
+@pattern h((x,y),z) = [x,y,z]
 
 @assert h((1,2),(3,4)) == [1,2,3,4]
 @assert h(1,(2,3)) == [1,2,3]
@@ -29,7 +29,6 @@ using PatternDispatch
 
 @pattern l(::Any)    = 1
 @pattern l(::Number) = 2
-
 
 @assert l(5) == l(5.0) == 2
 @assert l(:x) == l("x") == l([1,2]) == 1

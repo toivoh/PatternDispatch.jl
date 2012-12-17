@@ -33,6 +33,16 @@ function add(mt::MethodTable, m::Method)
         end
     end
     insert(mt.methods, i, m)
+
+    for mk in mt.methods
+        lb = m.sig & mk.sig
+        if lb === nullpat; continue; end
+        if any([ml.sig == lb for ml in mt.methods]) continue; end
+        
+        println("Warning: New @pattern method ", mt.name, m.sig)
+        println("         is ambiguous with   ", mt.name, mk.sig)
+        println("         Make sure ", mt.name, lb, " is defined first")
+    end
 end
 
 function dispatch(mt::MethodTable, args::Tuple)
