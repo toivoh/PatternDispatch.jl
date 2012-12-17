@@ -14,7 +14,7 @@ function simplify(p::Pattern)
 
     gs = Dict{Value,Guard}()
     for g in p.guards
-        if !isa(g, Bind)
+        if isa(g, Guard)
             node = g.arg
             new_g = has(gs, node) ? (g & gs[node]) : g
             if new_g === never
@@ -23,7 +23,7 @@ function simplify(p::Pattern)
             gs[node] = new_g
         end
     end
-    guards = Guard[]
+    guards = Node[]
     for g in p.guards
         if isa(g, Bind)
             push(guards, g)
@@ -42,11 +42,11 @@ end
 
 (&)(p::Pattern, q::Pattern) = simplify(Pattern([p.guards, q.guards]))
 
-unbind(p::Pattern) = Pattern(Guard[filter(g->!isa(g,Bind), p.guards)...])
+unbind(p::Pattern) = Pattern(Node[filter(g->!isa(g,Bind), p.guards)...])
 
 function isequal(p::Pattern, q::Pattern)
     p, q = simplify(p), simplify(q)
-    return Set{Guard}(p.guards...) == Set{Guard}(q.guards...)
+    return Set{Node}(p.guards...) == Set{Node}(q.guards...)
 end
 
 >=(p::Pattern, q::Pattern) = (p & q) == q
