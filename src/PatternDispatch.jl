@@ -4,10 +4,11 @@ load("Debug.jl")
 module PatternDispatch
 using Toivo, Debug
 import Base.&, Base.isequal, Base.>=, Base.>, Base.<=, Base.<
-export @immutable, @get!
+export @immutable
 export @pattern, @qpat, @spat, simplify, unbind
 
-include(find_in_path("PatternDispatch/src/immutable.jl"))
+include(find_in_path("PatternDispatch/src/Immutable.jl"))
+using Immutable
 
 
 abstract Node

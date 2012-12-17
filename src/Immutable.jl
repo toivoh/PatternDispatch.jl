@@ -1,8 +1,11 @@
 
+module Immutable
+using Toivo
+export @immutable
+
 macro immutable(ex)
     code_immutable(ex)
 end
-
 function code_immutable(ex)
     @expect is_expr(ex, :type, 2)
     sig, body = ex.args    
@@ -21,13 +24,13 @@ function code_immutable(ex)
     end
     
     instances = Dict()
-    ast=esc(quote
+    esc(quote
         type $sig
             $(body.args...)
             $typename($(sigs...)) = @get!($(quot(instances)), ($(fields...),),
                                           new($(fields...)))
         end
     end)
-#    @show ast
-    ast
+end
+
 end
