@@ -27,13 +27,13 @@ function recode(c::Context, arg, ex::Expr)
     if head === :(::)
         @assert 1 <= nargs <= 2
         if nargs == 1
-            push(c.guards, :( Isa($arg, $(esc(args[1]))) ))
+            push(c.guards, :( typeguard($arg, $(esc(args[1]))) ))
         else
-            push(c.guards, :( Isa($arg, $(esc(args[2]))) ))
+            push(c.guards, :( typeguard($arg, $(esc(args[2]))) ))
             recode(c, arg, args[1])
         end
     elseif head === :tuple
-        push(c.guards, :( Isa($arg, $(quot(NTuple{nargs,Any}))) ))
+        push(c.guards, :( typeguard($arg, $(quot(NTuple{nargs,Any}))) ))
         for (k, p) in enumerate(args)
             node = gensym("e$k")
             push(c.code, :( $node = TupleRef($arg, $k) ))

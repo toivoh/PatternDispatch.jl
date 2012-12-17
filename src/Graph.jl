@@ -4,7 +4,8 @@ import Base.&, Base.isequal, Base.>=, Base.>, Base.<=, Base.<, Base.show
 using Immutable
 
 export Node, Value, Guard
-export Arg, argsym, TupleRef, Bind, Egal, Isa, Never, never
+export Arg, argsym, TupleRef, Bind, Egal, Isa, Never, never, Always, always
+export typeguard
 export Pattern, make_pattern, nullpat
 
 
@@ -24,6 +25,12 @@ const argsym  = gensym("arg")
 @immutable type Isa      <: Guard;  arg::Value; typ;           end
 type Never <: Guard; end
 const never = Never()
+type Always <: Guard; end
+const always = Always()
+
+typeguard(arg::Value, ::Type{Any}) = always
+typeguard(arg::Value, ::Type{None}) = never
+typeguard(arg::Value, typ) = Isa(arg, typ)
 
 depsof(node::Union(Arg,Never)) = []
 depsof(node::Union(TupleRef, Bind, Egal, Isa)) = [node.arg,]
@@ -35,7 +42,7 @@ depsof(node::Union(TupleRef, Bind, Egal, Isa)) = [node.arg,]
 function (&)(s::Isa, t::Isa) 
     @assert s.arg===t.arg
     T = tintersect(s.typ, t.typ)
-    T === None ? never : Isa(s.arg, T)
+    T === None ? never : typeguard(s.arg, T)
 end
 
 
@@ -52,7 +59,8 @@ const nullpat = Pattern((Node=>Guard)[argnode => never], Set{Bind}())
 function make_pattern(nodes::Node...)
     gs, bs = Dict{Node,Guard}(), Set{Bind}()
     for node in nodes
-        if isa(node, Never); return nullpat; end
+        if node === never; return nullpat; end
+        if node === always; continue; end
 
         if isa(node, Bind); add(bs, node)
         else

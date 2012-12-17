@@ -8,6 +8,12 @@ using PatternDispatch
 @show (@qpat 1::Float64)
 
 println()
+@show (@qpat x::Any)
+@show (@qpat ::Any)
+@show (@qpat ::None)
+@show (@qpat (x::None,y::Int))
+
+println()
 @show (@qpat x)
 @show (@qpat ::Int)
 @show (@qpat x::Int)
