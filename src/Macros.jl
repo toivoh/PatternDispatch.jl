@@ -17,7 +17,23 @@ type MethodTable
     MethodTable(name::Symbol) = new(name, Method[])
 end
 
-add(mt::MethodTable, m::Method) = (push(mt.methods, m); nothing)
+function add(mt::MethodTable, m::Method)
+    # insert the pattern in ascending topological order, as late as possible
+    i = length(mt.methods)+1
+    for (k, mk) in enumerate(mt.methods)
+        if unbind(m.sig) <= unbind(mk.sig)
+            if unbind(m.sig) >= unbind(mk.sig)
+                # equal signature ==> replace
+                mt.methods[k] = m
+                return
+            else
+                i = k
+                break
+            end
+        end
+    end
+    insert(mt.methods, i, m)
+end
 
 function dispatch(mt::MethodTable, args::Tuple)
     for m in mt.methods
