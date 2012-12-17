@@ -4,8 +4,8 @@ module TestDispatch
 using PatternDispatch
 
 @show @qpat (x::Int)::Real
-@show simplify(@qpat (x::Int)::Real)
-@show @spat (x::Int)::Real
+#@show simplify(@qpat (x::Int)::Real)
+@show @qpat (x::Int)::Real
 @show unbind(@qpat x::Int)
 
 @show (@qpat (x::Int)) == (@qpat (x::Int)::Real)
@@ -15,6 +15,6 @@ using PatternDispatch
 @show (@qpat x) > (@qpat x::Int)
 @show (@qpat x) <= (@qpat x::Int)
 
-@show (@spat x::Int::String) 
+@show (@qpat x::Int::String) 
 
 end # module

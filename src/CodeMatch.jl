@@ -16,9 +16,8 @@ emit_guard(c::Ctx, ex) = emit(c, :( if !$ex; return (false,nothing); end ))
 
 function code_match(p::Pattern)
     c = Ctx()
-    for g in p.guards
-        code_match(c, g)
-    end
+    for g in values(p.guards); code_match(c, g); end
+    for b in p.bindings;       code_match(c, b); end
     quote; $(c.code...); end
 end
 

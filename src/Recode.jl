@@ -15,7 +15,7 @@ function recode(ex)
     recode(r, quot(Arg()), ex)
     quote
         $(r.code...)
-        Pattern(Node[$(r.guards...)])
+        make_pattern($(r.guards...))
     end
 end
 
