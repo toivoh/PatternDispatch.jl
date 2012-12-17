@@ -1,7 +1,7 @@
 
 module Immutable
 using Toivo
-export @immutable
+export @immutable, @get!  # shouldn't need to export @get!
 
 macro immutable(ex)
     code_immutable(ex)

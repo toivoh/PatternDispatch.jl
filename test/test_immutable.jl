@@ -1,7 +1,7 @@
 include(find_in_path("PatternDispatch.jl"))
 
 module TestImmutable
-using PatternDispatch
+using PatternDispatch.Immutable
 
 @immutable type T
     x::Int

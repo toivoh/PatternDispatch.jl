@@ -4,33 +4,11 @@ load("Debug.jl")
 module PatternDispatch
 using Toivo, Debug
 import Base.&, Base.isequal, Base.>=, Base.>, Base.<=, Base.<
-export @immutable
 export @pattern, @qpat, @spat, simplify, unbind
 
 include(find_in_path("PatternDispatch/src/Immutable.jl"))
-using Immutable
-
-
-abstract Node
-abstract Value <: Node
-abstract Guard <: Node
-
-type Arg <: Value; end
-const argnode = Arg()
-const argsym  = gensym("arg")
-
-@immutable type TupleRef <: Value;  arg::Value; index::Int;    end
-@immutable type Bind     <: Guard;  arg::Value; name::Symbol;  end
-@immutable type Egal     <: Guard;  arg::Value; value;         end
-@immutable type Isa      <: Guard;  arg::Value; typ;           end
-type Never <: Guard; end
-const never = Never()
-
-type Pattern
-    guards::Vector{Guard}
-end
-
-const nullpat = Pattern(Guard[never])
+include(find_in_path("PatternDispatch/src/Graph.jl"))
+using Graph
 
 
 # ==== recode: function signature -> Pattern creating AST =====================
