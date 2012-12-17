@@ -6,17 +6,22 @@ export @pattern
 
 # ==== MethodTable ============================================================
 
-type MethodTable
-    name::Symbol
-    methods::Vector{Function}
-    MethodTable(name::Symbol) = new(name, Function[])
+type Method
+    sig::Pattern
+    f::Function
 end
 
-add(mt::MethodTable, m::Function) = (push(mt.methods, m); nothing)
+type MethodTable
+    name::Symbol
+    methods::Vector{Method}
+    MethodTable(name::Symbol) = new(name, Method[])
+end
+
+add(mt::MethodTable, m::Method) = (push(mt.methods, m); nothing)
 
 function dispatch(mt::MethodTable, args::Tuple)
     for m in mt.methods
-        matched, result = m(args)
+        matched, result = m.f(args)
         if matched; return result; end
     end
     error("No matching method found for pattern function $(mt.name)")
@@ -25,10 +30,11 @@ end
 
 function create_method(p::Pattern, body)
     code = code_match(p)
-    @eval $argsym->begin
+    f = @eval $argsym->begin
         $(code)
         (true, $body)
     end
+    Method(p, f)
 end
 
 # ==== @pattern ===============================================================
