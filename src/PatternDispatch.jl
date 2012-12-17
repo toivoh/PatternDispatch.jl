@@ -3,7 +3,7 @@ load("Debug.jl")
 
 module PatternDispatch
 using Toivo, Debug
-export @pattern, @qpat, simplify, unbind
+export @pattern, @qpat
 
 include(find_in_path("PatternDispatch/src/Immutable.jl"))
 include(find_in_path("PatternDispatch/src/Graph.jl"))

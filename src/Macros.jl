@@ -21,8 +21,8 @@ function add(mt::MethodTable, m::Method)
     # insert the pattern in ascending topological order, as late as possible
     i = length(mt.methods)+1
     for (k, mk) in enumerate(mt.methods)
-        if unbind(m.sig) <= unbind(mk.sig)
-            if unbind(m.sig) >= unbind(mk.sig)
+        if m.sig <= mk.sig
+            if m.sig >= mk.sig
                 # equal signature ==> replace
                 mt.methods[k] = m
                 return

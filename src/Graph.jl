@@ -5,7 +5,7 @@ using Immutable
 
 export Node, Value, Guard
 export Arg, argsym, TupleRef, Bind, Egal, Isa, Never, never
-export Pattern, make_pattern, nullpat, unbind
+export Pattern, make_pattern, nullpat
 
 
 # ---- Node -------------------------------------------------------------------
@@ -61,12 +61,9 @@ function make_pattern(nodes::Node...)
     Pattern(gs, bs)
 end
 
-unbind(p::Pattern) = Pattern(p.guards, Set{Bind}())
 (&)(p::Pattern, q::Pattern) = make_pattern(
     values(p.guards)..., values(q.guards)..., p.bindings..., q.bindings...)
-function isequal(p::Pattern, q::Pattern)
-    isequal(p.guards, q.guards) && isequal(p.bindings, q.bindings)
-end
+isequal(p::Pattern, q::Pattern) = isequal(p.guards, q.guards)
 
 >=(p::Pattern, q::Pattern) = (p & q) == q
 >(p::Pattern, q::Pattern)  = (p >= q) && (p != q)
