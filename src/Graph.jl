@@ -4,6 +4,7 @@ import Base.&, Base.isequal, Base.>=, Base.>, Base.<=, Base.<, Base.show
 using Immutable
 
 export Node, Value, Guard
+# todo: don't export all of those?
 export Arg, argsym, TupleRef, Bind, Egal, Isa, Never, never, Always, always
 export typeguard
 export Pattern, make_pattern, nullpat
@@ -41,15 +42,13 @@ depsof(node::Union(TupleRef, Bind, Egal, Isa)) = [node.arg,]
 (&)(t::Isa, e::Egal) = e & t
 function (&)(s::Isa, t::Isa) 
     @assert s.arg===t.arg
-    T = tintersect(s.typ, t.typ)
-    T === None ? never : typeguard(s.arg, T)
+    typeguard(s.arg, tintersect(s.typ, t.typ))
 end
 
 
 # ---- Pattern ----------------------------------------------------------------
 
 type Pattern
-#    guards::Vector{Node}
     guards::Dict{Node,Guard}
     bindings::Set{Bind}
 end
@@ -115,7 +114,7 @@ function showpat(io::IO, users::Dict, node::Value)
         return
     end
 
-    # Bind TupleRef Egal Isa
+    # printing order: Bind, TupleRef, Egal, Isa
     us = sort(cmp, Node[users[node]...])
     k, n = 1, length(us)
     while k <= n
