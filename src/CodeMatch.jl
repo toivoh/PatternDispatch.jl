@@ -2,7 +2,7 @@
 # CodeMatch: Pattern -> matching code
 module CodeMatch
 using Graph, Toivo
-export code_match
+export code_match, code_pat
 
 
 # ---- sequence: construct an evaluation order --------------------------------
@@ -31,6 +31,15 @@ end
 
 
 # ---- code_pred: code the matching predicate of a pattern --------------------
+
+function code_pat(p::Pattern)
+    pred, results = code_pred(p)
+    code = {}
+    for b in p.bindings
+        push(code, :($(b.name) = $(evaluate!(results, b.arg))))
+    end
+    pred, expr(:block, code)
+end
 
 function code_pred(p::Pattern)
     seq = sequence(p)
@@ -65,10 +74,9 @@ function evaluate!(results::Dict{Node,Any}, node::Node)
 end
 
 encode(c, v::Arg)      = argsym
-encode(c, v::TupleRef) = :( $(evaluate(c,v.arg))[$(v.index)] )
-encode(c, g::Egal) = :(is( $(evaluate(c, g.arg)), $(quot(g.value))))
-encode(c, g::Isa)  = :(isa($(evaluate(c, g.arg)), $(quot(g.typ  ))))
-
+encode(c, v::TupleRef) = :( $(evaluate!(c,v.arg))[$(v.index)] )
+encode(c, g::Egal) = :(is( $(evaluate!(c, g.arg)), $(quot(g.value))))
+encode(c, g::Isa)  = :(isa($(evaluate!(c, g.arg)), $(quot(g.typ  ))))
 
 
 # ---- Old stuff -------------------------------------------------------------
