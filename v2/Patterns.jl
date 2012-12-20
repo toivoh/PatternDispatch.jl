@@ -1,8 +1,10 @@
 
 module Patterns
-import Base.&
+import Base.&, Base.isequal, Base.>=, Base.>, Base.<=, Base.<, Base.show
 using Immutable
-export Node, Predicate
+export Node, Predicate, argnode, never, always, tupref, egalpred, typepred
+export Intension, intension, naught, anything
+export Pattern
 
 
 # ---- Node -------------------------------------------------------------------
@@ -22,9 +24,12 @@ const always  = Always()
 @immutable type Egal     <: Predicate;  arg::Node; value;       end
 @immutable type Isa      <: Predicate;  arg::Node; typ;         end
 
-typeguard(arg::Node, ::Type{Any})  = always
-typeguard(arg::Node, ::Type{None}) = never
-typeguard(arg::Node, typ) = Isa(arg, typ)
+tupref(  arg::Node, index::Int) = TupleRef(arg, index)
+egalpred(arg::Node, value)      = Egal(arg, value)
+
+typepred(arg::Node, ::Type{Any})  = always
+typepred(arg::Node, ::Type{None}) = never
+typepred(arg::Node, typ) = Isa(arg, typ)
 
 depsof(node::Union(Arg, Never, Always))  = []
 depsof(node::Union(TupleRef, Egal, Isa)) = [node.arg]
@@ -41,7 +46,7 @@ samearg(n::Node, m::Node) = @assert n.arg===m.arg
 (&)(e::Egal, f::Egal) = (samearg(e, f); e.value === f.value ? e : never)
 (&)(e::Egal, t::Isa)  = (samearg(e, t); isa(e.value, t.typ) ? e : never)
 (&)(t::Isa,  e::Egal) = e & t
-(&)(s::Isa, t::Isa) = (samearg(e,t); typeguard(s.arg, tintersect(s.typ,t.typ)))
+(&)(s::Isa, t::Isa) = (samearg(s,t); typepred(s.arg, tintersect(s.typ,t.typ)))
 
 
 # ---- Intension --------------------------------------------------------------
@@ -100,13 +105,13 @@ function show(io::IO, p::Pattern)
 end
     
 adduser(users::Dict, u::Node) = for d in depsof(u); adduser(users, u, d); end
-function adduser(users::Dict, user::Node, dep::Node)
-    if !has(users, dep); adduser(users, dep); users[dep] = Set{Node}() end
+function adduser(users::Dict, user, dep::Node)
+    if !has(users, dep); adduser(users, dep); users[dep] = Set() end
     add(users[dep], user)
 end
 
 const typeorder = [Symbol=>1, TupleRef=>2, Egal=>3, Isa=>3]
-cmp(x::Node,y::Node) = typeorder[typeof(x)] < typeorder[typeof(y)]
+cmp(x,y) = typeorder[typeof(x)] < typeorder[typeof(y)]
 cmp(x::Symbol,   y::Symbol)   = string(x) < string(y)
 cmp(x::TupleRef, y::TupleRef) = x.index   < y.index
 
