@@ -7,7 +7,7 @@ export Node, Value, Guard
 # todo: don't export all of those?
 export Arg, argsym, TupleRef, Bind, Egal, Isa, Never, never, Always, always
 export typeguard
-export Pattern, make_pattern, nullpat
+export Pattern, guardsof, make_pattern, nullpat
 
 
 # ---- Node -------------------------------------------------------------------
@@ -33,10 +33,6 @@ typeguard(arg::Value, ::Type{Any}) = always
 typeguard(arg::Value, ::Type{None}) = never
 typeguard(arg::Value, typ) = Isa(arg, typ)
 
-depsof(node::Union(Arg,Never)) = []
-depsof(node::Union(TupleRef, Bind, Egal, Isa)) = [node.arg,]
-
-
 (&)(e::Egal, f::Egal)= (@assert e.arg===f.arg; e.value===f.value ?   e : never)
 (&)(e::Egal, t::Isa) = (@assert e.arg===t.arg; isa(e.value, t.typ) ? e : never)
 (&)(t::Isa, e::Egal) = e & t
@@ -52,6 +48,15 @@ type Pattern
     guards::Dict{Node,Guard}
     bindings::Set{Bind}
 end
+
+guardsof(p::Pattern) = values(p.guards)
+
+depsof(node::Union(Arg,Never)) = []
+depsof(node::Union(TupleRef, Bind, Egal, Isa)) = [node.arg]
+
+depsof(p::Pattern, node::Node)     = depsof(node)
+depsof(p::Pattern, node::TupleRef) = [node.arg, p.guards[node.arg]]
+
 
 const nullpat = Pattern((Node=>Guard)[argnode => never], Set{Bind}())
 const toppat  = Pattern((Node=>Guard)[], Set{Bind}())

@@ -4,6 +4,75 @@ module CodeMatch
 using Graph, Toivo
 export code_match
 
+
+# ---- sequence: construct an evaluation order --------------------------------
+
+type Seq
+    p::Pattern
+    evaluated::Set{Node}
+    seq::Vector{Node}
+
+    Seq(p::Pattern) = new(p, Set{Node}(), Node[])
+end
+
+function sequence(p::Pattern)
+    c = Seq(p)
+    for g in guardsof(p);  sequence!(c, g);  end
+    c.seq
+end
+
+function sequence!(c::Seq, node::Node)
+    if has(c.evaluated, node); return; end    
+
+    for dep in depsof(c.p, node);  sequence!(c, dep);  end
+    add(c.evaluated, node)
+    push(c.seq, node)
+end
+
+
+# ---- code_pred: code the matching predicate of a pattern --------------------
+
+function code_pred(p::Pattern)
+    seq = sequence(p)
+    results = Dict{Node,Any}()
+    code = {}
+    preds = {}
+    for node in seq
+        ex = evaluate!(results, node)
+        if isa(node, Guard)
+            push(preds, isempty(code) ? ex : quote; $(code...); $ex; end)
+            code = {}
+        else
+            if isa(ex, Symbol)
+                results[node] = ex
+            else
+                val = gensym("v")
+                push(code, :( $val = $ex ))
+                results[node] = val            
+            end
+        end
+    end
+    if isempty(preds); return quot(true); end
+    pred = preds[1]
+    for factor in preds[2:end]; pred = :($pred && $factor); end
+    pred, results
+end
+
+function evaluate!(results::Dict{Node,Any}, node::Node)
+    if has(results, node) results[node]
+    else                  encode(results, node)
+    end
+end
+
+encode(c, v::Arg)      = argsym
+encode(c, v::TupleRef) = :( $(evaluate(c,v.arg))[$(v.index)] )
+encode(c, g::Egal) = :(is( $(evaluate(c, g.arg)), $(quot(g.value))))
+encode(c, g::Isa)  = :(isa($(evaluate(c, g.arg)), $(quot(g.typ  ))))
+
+
+
+# ---- Old stuff -------------------------------------------------------------
+
 type Ctx
     p::Pattern
     code::Vector
