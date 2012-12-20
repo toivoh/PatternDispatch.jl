@@ -63,18 +63,19 @@ end
 #     Method(p, f)
 # end
 
-function create_method(p::Pattern, body)
+function code_metod(p::Pattern, body)
     pred, bind = code_pat(p)
-    f = @eval $argsym->begin
+    fdef = :($argsym->begin
         if $pred
             $bind
             (true, $body)
         else
             (false, nothing)
         end 
-    end
-    Method(p, f)
+    end)
+    fdef
 end
+create_method(p::Pattern, body) = Method(p, eval(code_metod(p,body)))
 
 
 # ==== @pattern ===============================================================
