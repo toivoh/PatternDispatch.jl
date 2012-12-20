@@ -54,14 +54,28 @@ function dispatch(mt::MethodTable, args::Tuple)
 end
 
 
+# function create_method(p::Pattern, body)
+#     code = code_match(p)
+#     f = @eval $argsym->begin
+#         $(code)
+#         (true, $body)
+#     end
+#     Method(p, f)
+# end
+
 function create_method(p::Pattern, body)
-    code = code_match(p)
+    pred, bind = code_pat(p)
     f = @eval $argsym->begin
-        $(code)
-        (true, $body)
+        if $pred
+            $bind
+            (true, $body)
+        else
+            (false, nothing)
+        end 
     end
     Method(p, f)
 end
+
 
 # ==== @pattern ===============================================================
 
