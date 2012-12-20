@@ -59,17 +59,19 @@ end
 type MethodTable
     top::Sig
     bottom::Sig
+    sigs::Set{Sig}
+
     function MethodTable() 
         top, bottom = Sig(toppat), Sig(nullpat)
         add(top.gt, bottom)
         add(bottom.lt, top)
-        new(top, bottom)
+        new(top, bottom, Set{Sig}(top, bottom))
     end
 end
 
 for (below, above, higher_eq) in ((:gt, :lt, >=), (:lt, :gt, <=)=)
-    below, above = quot(below), quot(above)
-    @eval function $(symbol("visit_$(below)!"))(seen::Set{Sig},s::Sig, at::Sig)
+    below, above, visit! = quot(below), quot(above), symbol("visit_$(below)!")
+    @eval function $visit!(seen::Set{Sig}, s::Sig, at::Sig)
         if has(seen, at); return; end
         add(seen, at)
         if $higher_eq(s.p, at.p)  # s >= at
@@ -78,15 +80,48 @@ for (below, above, higher_eq) in ((:gt, :lt, >=), (:lt, :gt, <=)=)
             add(s.($below)), at)
             add(at.($above), s)
         else
-            for below in at.($below); visit!(seen, s, below); end
+            for below in at.($below); $visit!(seen, s, below); end
         end        
     end
 end
 
 function add(mt::MethodTable, p::Pattern)
     s = Sig(p)
+    add(mt.signatures, s) # todo: what if it's already in the DAG?
     visit_gt!(Set{Sig}(), s, mt.top)
     visit_lt!(Set{Sig}(), s, mt.bottom)
     for above in s.lt;  del_each(above.gt, s.gt)  end
     for below in s.gt;  del_each(below.lt, s.lt)  end
+end
+
+
+# ---- Create Decision Tree ---------------------------------------------------
+
+firstitem(iter) = next(iter, start(iter))[1]
+
+function dtree(mt::MethodTable)
+    dtree(mt.top, mt.signatures)
+end
+
+
+function visit_gt!(seen::Set{Sig}, s::Sig)
+    if has(seen, s); return; end
+    add(seen, s)
+    for below in s.gt; visit_gt!(seen, below); end       
+end
+
+function dtree(top::Sig, sigs::Set{Sig})
+    pivot = firstitem(top.gt) # should always have at least the bottom below
+    if pivot.p === nullpat
+        # todo: fill in guards
+        # todo: fill method
+        Decision(Guard[], Method(Value[], ()->()))
+    else
+        below = Set{Sig}()
+        visit_gt!(below, pivot)
+        pass = dtree(pivot, sigs & below)
+        fail = dtree(top,   sigs - below)
+        # todo: fill in guards
+        Decision(Guard[], Branch(pass, fail))
+    end    
 end
