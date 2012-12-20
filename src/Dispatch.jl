@@ -1,5 +1,8 @@
 
 
+
+# ---- Decision Tree ----------------------------------------------------------
+
 abstract Action
 type Decision{T<:Action}
     guards::Vector{Guard}
@@ -38,4 +41,52 @@ function code_dispatch(results::Dict{Node,Any}, d::Decision)
         fail = code_fail(results_fail, d.action)
         :( $ex ? $pass : $fail )
     end
+end
+
+
+# ---- MethodTable ------------------------------------------------------------
+
+using Graph
+
+type Sig
+    p::Pattern
+    gt::Set{Sig}
+    lt::Set{Sig}
+
+    Sig(sig::Pattern) = new(sig, Set{Sig}(), Set{Sig}())
+end
+
+type MethodTable
+    top::Sig
+    bottom::Sig
+    function MethodTable() 
+        top, bottom = Sig(toppat), Sig(nullpat)
+        add(top.gt, bottom)
+        add(bottom.lt, top)
+        new(top, bottom)
+    end
+end
+
+for (below, above, higher_eq) in ((:gt, :lt, >=), (:lt, :gt, <=)=)
+    below, above = quot(below), quot(above)
+    @eval function $(symbol("visit_$(below)!"))(seen::Set{Sig},s::Sig, at::Sig)
+        if has(seen, at); return; end
+        add(seen, at)
+        if $higher_eq(s.p, at.p)  # s >= at
+            if $higher_eq(at.p, s.p); return; end  # s == at
+            # s > at
+            add(s.($below)), at)
+            add(at.($above), s)
+        else
+            for below in at.($below); visit!(seen, s, below); end
+        end        
+    end
+end
+
+function add(mt::MethodTable, p::Pattern)
+    s = Sig(p)
+    visit_gt!(Set{Sig}(), s, mt.top)
+    visit_lt!(Set{Sig}(), s, mt.bottom)
+    for above in s.lt;  del_each(above.gt, s.gt)  end
+    for below in s.gt;  del_each(below.lt, s.lt)  end
 end

@@ -54,6 +54,7 @@ type Pattern
 end
 
 const nullpat = Pattern((Node=>Guard)[argnode => never], Set{Bind}())
+const toppat  = Pattern((Node=>Guard)[], Set{Bind}())
 
 function make_pattern(nodes::Node...)
     gs, bs = Dict{Node,Guard}(), Set{Bind}()
