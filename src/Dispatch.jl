@@ -58,12 +58,14 @@ function code_metod(p::Pattern, body)
     pred, bind = code_match(p)
     fdef = :($argsym->begin
         if $pred
-            $bind
+            $(bind...)
             (true, $body)
         else
             (false, nothing)
         end 
     end)
+    @show p
+    @show fdef
     fdef
 end
 create_method(p::Pattern, body) = Method(p, eval(code_metod(p,body)))
@@ -73,13 +75,17 @@ create_method(p::Pattern, body) = Method(p, eval(code_metod(p,body)))
 
 type Seq
     intent::Intension
-    evaluated::Set{Node}
+    evaluated::Dict{Node,Int}
+    guarded::Set{Predicate}
     seq::Vector{Vector{Node}}
 
-    Seq(i::Intension) = new(i, Set{Node}(), Vector{Node}[Node[]])
+    Seq(i::Intension) = new(i, Dict{Node,Int}(), Set{Predicate}(), Vector{Node}[Node[]])
 end
 
 function sequence_guard!(c::Seq, pred::Predicate)
+    if has(c.guarded, pred); return; end
+    add(c.guarded, pred)
+
     sequence!(c, pred)
     s = c.seq[end]
     if length(s) == 0 || s[end] != pred; push(s, pred); end
@@ -87,44 +93,59 @@ function sequence_guard!(c::Seq, pred::Predicate)
 end
 
 function sequence!(c::Seq, node::Node)
-    if has(c.evaluated, node); return; end    
+    if has(c.evaluated, node)
+        c.evaluated[node] += 1
+        return
+    end
 
     for dep in depsof(node);  sequence!(c, dep)      end
     for g in guardsof(c.intent, node);  sequence_guard!(c, g)  end
-    add(c.evaluated, node)
+    c.evaluated[node] = 1
     push(c.seq[end], node)
 end
 
-function sequence(p::Pattern)
+type Encode
+    evaluated::Dict{Node,Int}
+    results::Dict{Node,Any}
+    Encode(evaluated::Dict{Node,Int}) = new(evaluated, Dict{Node,Any}())
+end
+
+function encode!(c::Encode, nodes::Vector, ispred::Bool)
+    exprs = {}
+    for node in nodes
+        ex = encode!(c, node)        
+        if ex != nothing; push(exprs, ex); end
+    end
+    if ispred
+        push(exprs, c.results[nodes[end]])
+    end
+    exprs
+end
+function encode!(c::Encode, node::Node)
+    if has(c.results, node); return c.results[node] end
+    ex = encode(c.results, node)
+    if isa(ex, Symbol) || c.evaluated[node] == 1
+        c.results[node] = ex
+        nothing
+    else
+        var = gensym("t")
+        c.results[node] = var
+        :( $var = $ex )
+    end
+end
+
+wrap(exprs::Vector) = length(exprs)==1 ? exprs[1] : expr(:block, exprs)
+
+function code_match(p::Pattern)
     c = Seq(p.intent)
     for g in guardsof(p.intent);    sequence_guard!(c, g)  end
     for node in values(p.bindings); sequence!(c, node)     end
-    c.seq
-end
 
-function encode!(results::Dict{Node,Symbol}, nodes::Vector)
-    exprs = {encode!(results, node) for node in nodes}
-    length(exprs)==1 ? exprs[1] : expr(:block, exprs)
-end
-function encode!(results::Dict{Node,Symbol}, node::Node)
-    if has(results, node); return results[node] end
-    ex = encode(results, node)
-    var = gensym("t")
-    results[node] = var
-    :( $var = $ex )
-end
-
-function code_match(p::Pattern)
-    seq = sequence(p)
-    results = Dict{Node,Symbol}()
-    exprs = [encode!(results, s) for s in seq]
-    preds = exprs[1:end-1]    
-    prebind = exprs[end]
-    binds = { :( $name = $(results[node])) for (name, node) in p.bindings }
-    bind = quote
-        $prebind
-        $(binds...)
-    end
+    enc = Encode(c.evaluated)
+    preds = [wrap(encode!(enc, seq, true)) for seq in c.seq[1:end-1]]
+    prebind = encode!(enc, c.seq[end], false)
+    binds = { :( $name = $(enc.results[node])) for (name, node) in p.bindings }
+    bind = vcat(prebind, binds)
 
     if isempty(preds)
         pred = quot(true)
