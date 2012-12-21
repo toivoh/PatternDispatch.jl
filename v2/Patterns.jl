@@ -1,9 +1,11 @@
 
 module Patterns
 import Base.&, Base.isequal, Base.>=, Base.>, Base.<=, Base.<, Base.show
-using Immutable
-export Node, Predicate, argnode, never, always, tupref, egalpred, typepred
+using Immutable, Toivo
+export Node, Predicate
+export argsym, argnode, never, always, tupref, egalpred, typepred
 export Intension, intension, naught, anything
+export encode, guardsof, depsof
 export Pattern
 
 
@@ -34,6 +36,11 @@ typepred(arg::Node, typ) = Isa(arg, typ)
 depsof(node::Union(Arg, Never, Always))  = []
 depsof(node::Union(TupleRef, Egal, Isa)) = [node.arg]
 
+encode(results, v::Arg)      = argsym
+encode(results, v::TupleRef) = :( $(results[v.arg])[$(v.index)] )
+encode(results, g::Egal)     = :(is( $(results[g.arg]), $(quot(g.value))))
+encode(results, g::Isa)      = :(isa($(results[g.arg]), $(quot(g.typ  ))))
+
 
 # (&)(::Never,     ::Never) = never
 # (&)(::Predicate, ::Never) = never
@@ -56,6 +63,10 @@ type Intension
 end
 
 guardsof(x::Intension) = values(x.factors)
+
+guardsof(i::Intension, node::Node)     = [] 
+guardsof(i::Intension, node::TupleRef) = [i.factors[node.arg]]
+
 
 const naught   = Intension((Node=>Predicate)[argnode => never])
 const anything = Intension((Node=>Predicate)[])
@@ -90,7 +101,7 @@ end
 
 function (&)(p::Pattern, q::Pattern)
     bindings = merge(p.bindings, q.bindings)
-    @assert length(bindings) == length(p.bindings)+length(q.bindings)
+#    @assert length(bindings) == length(p.bindings)+length(q.bindings)
     Pattern(p.intent & q.intent, bindings)
 end
 
