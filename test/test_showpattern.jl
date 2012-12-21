@@ -1,7 +1,7 @@
-include(find_in_path("PatternDispatch/v2/PatternDispatch.jl"))
+include(find_in_path("PatternDispatch.jl"))
 
 module TestShowPattern
-using PatternDispatch
+using PatternDispatch.Recode
 
 @show (@qpat 1)
 @show (@qpat 1::Int)

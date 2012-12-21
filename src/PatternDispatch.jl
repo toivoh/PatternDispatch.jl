@@ -6,9 +6,9 @@ using Toivo, Debug
 export @pattern
 
 include(find_in_path("PatternDispatch/src/Immutable.jl"))
-include(find_in_path("PatternDispatch/v2/Patterns.jl"))
-include(find_in_path("PatternDispatch/v2/Recode.jl"))
-include(find_in_path("PatternDispatch/v2/Dispatch.jl"))
+include(find_in_path("PatternDispatch/src/Patterns.jl"))
+include(find_in_path("PatternDispatch/src/Recode.jl"))
+include(find_in_path("PatternDispatch/src/Dispatch.jl"))
 using Patterns, Recode, Dispatch
 
 

@@ -1,4 +1,4 @@
-include(find_in_path("PatternDispatch/v2/PatternDispatch.jl"))
+include(find_in_path("PatternDispatch.jl"))
 
 module TestOps
 using PatternDispatch.Patterns, PatternDispatch.Recode
