@@ -11,10 +11,10 @@ export Pattern
 
 # ---- Node -------------------------------------------------------------------
 
-abstract Node
-abstract Predicate <: Node
+abstract Node{T}
+typealias Predicate Node{Bool}
 
-type Arg    <: Node; end
+type Arg    <: Node{Any}; end
 type Never  <: Predicate; end
 type Always <: Predicate; end
 const argnode = Arg()
@@ -22,7 +22,7 @@ const argsym  = gensym("arg")
 const never   = Never()
 const always  = Always()
 
-@immutable type TupleRef <: Node;       arg::Node; index::Int;  end
+@immutable type TupleRef <: Node{Any};  arg::Node; index::Int;  end
 @immutable type Egal     <: Predicate;  arg::Node; value;       end
 @immutable type Isa      <: Predicate;  arg::Node; typ;         end
 
