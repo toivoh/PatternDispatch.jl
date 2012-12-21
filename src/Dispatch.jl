@@ -1,127 +1,139 @@
 
+module Dispatch
+import Base.add
+using Patterns, Toivo
+export MethodTable, create_method, dispatch
 
 
-# ---- Decision Tree ----------------------------------------------------------
+# ==== MethodTable ============================================================
 
-abstract Action
-type Decision{T<:Action}
-    guards::Vector{Guard}
-    action::T
-end
-
-type Branch <: Action
-    pass::Decision
-    fail::Decision
-end
-
-type Method <: Action
-    args::Vector{Value}
+type Method
+    sig::Pattern
     f::Function
 end
 
-code_pass(results::Dict{Node,Any}, a::Branch) = code_dispatch(results, a.pass)
-code_fail(results::Dict{Node,Any}, a::Branch) = code_dispatch(results, a.fail)
-
-function code_pass(results::Dict{Node,Any}, a::Method)
-    expr(:call, a.f, {evaluate!(results, arg) for arg in a.args}...)
-end
-code_fail(::Dict{Node,Any}, ::Method) = :(error("no matching pattern found"))
-
-function code_dispatch(results::Dict{Node,Any}, d::Decision)
-    pred = quot(true)
-    results_fail = copy(results)
-    for g in d.guards
-        ex = evaluate!(results, g)
-        pred = pred == quot(true) ? ex : (:($pred && $ex))
-    end
-    if pred == quot(true)
-        code_pass(results, d.action)
-    else
-        pass = code_pass(results,      d.action)
-        fail = code_fail(results_fail, d.action)
-        :( $ex ? $pass : $fail )
-    end
-end
-
-
-# ---- MethodTable ------------------------------------------------------------
-
-using Graph
-
-type Sig
-    p::Pattern
-    gt::Set{Sig}
-    lt::Set{Sig}
-
-    Sig(sig::Pattern) = new(sig, Set{Sig}(), Set{Sig}())
-end
-
 type MethodTable
-    top::Sig
-    bottom::Sig
-    sigs::Set{Sig}
+    name::Symbol
+    methods::Vector{Method}
+    MethodTable(name::Symbol) = new(name, Method[])
+end
 
-    function MethodTable() 
-        top, bottom = Sig(toppat), Sig(nullpat)
-        add(top.gt, bottom)
-        add(bottom.lt, top)
-        new(top, bottom, Set{Sig}(top, bottom))
+function add(mt::MethodTable, m::Method)
+    # insert the pattern in ascending topological order, as late as possible
+    i = length(mt.methods)+1
+    for (k, mk) in enumerate(mt.methods)
+        if m.sig.intent <= mk.sig.intent
+            if m.sig.intent >= mk.sig.intent
+                # equal signature ==> replace
+                mt.methods[k] = m
+                return
+            else
+                i = k
+                break
+            end
+        end
+    end
+    insert(mt.methods, i, m)
+
+    for mk in mt.methods
+        lb = m.sig.intent & mk.sig.intent
+        if lb === naught; continue; end
+        if any([ml.sig.intent == lb for ml in mt.methods]) continue; end
+        
+        println("Warning: New @pattern method ", mt.name, m.sig)
+        println("         is ambiguous with   ", mt.name, mk.sig)
+        println("         Make sure ", mt.name, m.sig&mk.sig, " is defined first")
     end
 end
 
-for (below, above, higher_eq) in ((:gt, :lt, >=), (:lt, :gt, <=)=)
-    below, above, visit! = quot(below), quot(above), symbol("visit_$(below)!")
-    @eval function $visit!(seen::Set{Sig}, s::Sig, at::Sig)
-        if has(seen, at); return; end
-        add(seen, at)
-        if $higher_eq(s.p, at.p)  # s >= at
-            if $higher_eq(at.p, s.p); return; end  # s == at
-            # s > at
-            add(s.($below)), at)
-            add(at.($above), s)
+function dispatch(mt::MethodTable, args::Tuple)
+    for m in mt.methods
+        matched, result = m.f(args)
+        if matched; return result; end
+    end
+    error("No matching method found for pattern function $(mt.name)")
+end
+
+function code_metod(p::Pattern, body)
+    pred, bind = code_match(p)
+    fdef = :($argsym->begin
+        if $pred
+            $bind
+            (true, $body)
         else
-            for below in at.($below); $visit!(seen, s, below); end
-        end        
+            (false, nothing)
+        end 
+    end)
+    fdef
+end
+create_method(p::Pattern, body) = Method(p, eval(code_metod(p,body)))
+
+
+# ---- sequence: construct an evaluation order --------------------------------
+
+type Seq
+    intent::Intension
+    evaluated::Set{Node}
+    seq::Vector{Vector{Node}}
+
+    Seq(i::Intension) = new(i, Set{Node}(), Vector{Node}[Node[]])
+end
+
+function sequence_guard!(c::Seq, pred::Predicate)
+    sequence!(c, pred)
+    s = c.seq[end]
+    if length(s) == 0 || s[end] != pred; push(s, pred); end
+    push(c.seq, Node[])
+end
+
+function sequence!(c::Seq, node::Node)
+    if has(c.evaluated, node); return; end    
+
+    for dep in depsof(node);  sequence!(c, dep)      end
+    for g in guardsof(c.intent, node);  sequence_guard!(c, g)  end
+    add(c.evaluated, node)
+    push(c.seq[end], node)
+end
+
+function sequence(p::Pattern)
+    c = Seq(p.intent)
+    for g in guardsof(p.intent);    sequence_guard!(c, g)  end
+    for node in values(p.bindings); sequence!(c, node)     end
+    c.seq
+end
+
+function encode!(results::Dict{Node,Symbol}, nodes::Vector)
+    exprs = {encode!(results, node) for node in nodes}
+    length(exprs)==1 ? exprs[1] : expr(:block, exprs)
+end
+function encode!(results::Dict{Node,Symbol}, node::Node)
+    if has(results, node); return results[node] end
+    ex = encode(results, node)
+    var = gensym("t")
+    results[node] = var
+    :( $var = $ex )
+end
+
+function code_match(p::Pattern)
+    seq = sequence(p)
+    results = Dict{Node,Symbol}()
+    exprs = [encode!(results, s) for s in seq]
+    preds = exprs[1:end-1]    
+    prebind = exprs[end]
+    binds = { :( $name = $(results[node])) for (name, node) in p.bindings }
+    bind = quote
+        $prebind
+        $(binds...)
     end
-end
 
-function add(mt::MethodTable, p::Pattern)
-    s = Sig(p)
-    add(mt.signatures, s) # todo: what if it's already in the DAG?
-    visit_gt!(Set{Sig}(), s, mt.top)
-    visit_lt!(Set{Sig}(), s, mt.bottom)
-    for above in s.lt;  del_each(above.gt, s.gt)  end
-    for below in s.gt;  del_each(below.lt, s.lt)  end
-end
-
-
-# ---- Create Decision Tree ---------------------------------------------------
-
-firstitem(iter) = next(iter, start(iter))[1]
-
-function dtree(mt::MethodTable)
-    dtree(mt.top, mt.signatures)
-end
-
-
-function visit_gt!(seen::Set{Sig}, s::Sig)
-    if has(seen, s); return; end
-    add(seen, s)
-    for below in s.gt; visit_gt!(seen, below); end       
-end
-
-function dtree(top::Sig, sigs::Set{Sig})
-    pivot = firstitem(top.gt) # should always have at least the bottom below
-    if pivot.p === nullpat
-        # todo: fill in guards
-        # todo: fill method
-        Decision(Guard[], Method(Value[], ()->()))
+    if isempty(preds)
+        pred = quot(true)
     else
-        below = Set{Sig}()
-        visit_gt!(below, pivot)
-        pass = dtree(pivot, sigs & below)
-        fail = dtree(top,   sigs - below)
-        # todo: fill in guards
-        Decision(Guard[], Branch(pass, fail))
-    end    
+        pred = preds[1]
+        for factor in preds[2:end]; pred = :($pred && $factor); end
+    end
+    pred, bind
 end
+
+
+end # module

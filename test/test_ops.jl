@@ -1,26 +1,26 @@
-include(find_in_path("PatternDispatch.jl"))
+include(find_in_path("PatternDispatch/v2/PatternDispatch.jl"))
 
 module TestOps
-using PatternDispatch, PatternDispatch.Graph
+using PatternDispatch.Patterns, PatternDispatch.Recode
 
 unordered(x,y) = !(x >= y || y >= x)
 
-@assert (@qpat x) == (@qpat x)
-@assert (@qpat x) == (@qpat y)
-@assert unordered((@qpat x::Int), (@qpat x::String))
-@assert (@qpat x) > (@qpat x::Int)
-@assert (@qpat x::Int::Real) == (@qpat x::Int)
-@assert (@qpat x) > (@qpat x::Int)
+@assert (@ipat x) == (@ipat x)
+@assert (@ipat x) == (@ipat y)
+@assert unordered((@ipat x::Int), (@ipat x::String))
+@assert (@ipat x) > (@ipat x::Int)
+@assert (@ipat x::Int::Real) == (@ipat x::Int)
+@assert (@ipat x) > (@ipat x::Int)
 
-@assert (@qpat x) > (@qpat (x,y))
-@assert unordered((@qpat x::Int), (@qpat (x,y)))
-@assert (@qpat (x,y)::Number) == nullpat
-@assert unordered((@qpat (x::Int,y)), (@qpat (x,y::Int)))
-@assert (@qpat (x::Number,y)) > (@qpat (x::Int,y::Int))
+@assert (@ipat x) > (@ipat (x,y))
+@assert unordered((@ipat x::Int), (@ipat (x,y)))
+@assert (@ipat (x,y)::Number) == naught
+@assert unordered((@ipat (x::Int,y)), (@ipat (x,y::Int)))
+@assert (@ipat (x::Number,y)) > (@ipat (x::Int,y::Int))
 
-@assert (@qpat 1::Float64) == nullpat
-@assert (@qpat x::Any) == (@qpat x)
-@assert (@qpat (x::None,z)) == nullpat
-@assert (@qpat (x,y)::Tuple) == (@qpat (x,y))
+@assert (@ipat 1::Float64) == naught
+@assert (@ipat x::Any) == (@ipat x)
+@assert (@ipat (x::None,z)) == naught
+@assert (@ipat (x,y)::Tuple) == (@ipat (x,y))
 
 end

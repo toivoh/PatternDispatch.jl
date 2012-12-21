@@ -1,4 +1,4 @@
-include(find_in_path("PatternDispatch.jl"))
+include(find_in_path("PatternDispatch/v2/PatternDispatch.jl"))
 
 module TestDispatch
 using PatternDispatch
