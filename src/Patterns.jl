@@ -3,7 +3,7 @@ module Patterns
 import Base.&, Base.isequal, Base.>=, Base.>, Base.<=, Base.<, Base.show
 using Immutable, Toivo
 export Node, Predicate
-export argsym, argnode, never, always, tupref, egalpred, typepred
+export argsym, argnode, never, always, tupref, egalpred, typepred, subs
 export Intension, intension, naught, anything
 export encode, guardsof, depsof
 export Pattern
@@ -32,6 +32,11 @@ egalpred(arg::Node, value)      = Egal(arg, value)
 typepred(arg::Node, ::Type{Any})  = always
 typepred(arg::Node, ::Type{None}) = never
 typepred(arg::Node, typ) = Isa(arg, typ)
+
+subs(d::Dict, node::Union(Arg, Never, Always)) = node
+subs(d::Dict, node::TupleRef) = TupleRef(d[node.arg], node.index)
+subs(d::Dict, node::Egal)     = Egal(    d[node.arg], node.value)
+subs(d::Dict, node::Isa)      = Isa(     d[node.arg], node.typ)
 
 depsof(node::Union(Arg, Never, Always))  = []
 depsof(node::Union(TupleRef, Egal, Isa)) = [node.arg]
@@ -159,5 +164,35 @@ function showpat(io::IO, users::Dict, node::Node)
         k += 1
     end
 end
+
+
+
+# ---- Addons for try_sequence ----
+export Guard, Result
+
+@immutable type Guard <: Node{None}
+    pred::Predicate
+end
+type Result{T} <: Node{T}
+    node::Node{T}
+    nrefs::Int
+    ex
+    
+    Result(node::Node{T}) = new(node, 1, nothing)
+end
+Result{T}(node::Node{T}) = Result{T}(node)
+
+depsof(node::Guard) = [node.pred]
+subs(d::Dict, node::Guard) = Guard(d[node.pred])
+
+depsof(i::Intension,node::Node)     = depsof(node)
+depsof(i::Intension,node::TupleRef) = Node[node.arg,Guard(i.factors[node.arg])]
+
+resultof(node::Result) = (@assert node.ex != nothing; node.ex)
+
+encode(v::Arg)      = argsym
+encode(v::TupleRef) = :( $(resultof(v.arg))[$(v.index)] )
+encode(g::Egal)     = :(is( $(resultof(g.arg)), $(quot(g.value))))
+encode(g::Isa)      = :(isa($(resultof(g.arg)), $(quot(g.typ  ))))
 
 end # module
