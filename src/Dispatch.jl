@@ -54,7 +54,7 @@ function dispatch(mt::MethodTable, args::Tuple)
     error("No matching method found for pattern function $(mt.name)")
 end
 
-function code_metod(p::Pattern, body)
+function code_method(p::Pattern, body)
     pred, bind = code_match(p)
     fdef = :($argsym->begin
         if $pred
@@ -68,7 +68,7 @@ function code_metod(p::Pattern, body)
     @show fdef
     fdef
 end
-create_method(p::Pattern, body) = Method(p, eval(code_metod(p,body)))
+create_method(p::Pattern, body) = Method(p, eval(code_method(p,body)))
 
 
 # ---- sequence: construct an evaluation order --------------------------------
