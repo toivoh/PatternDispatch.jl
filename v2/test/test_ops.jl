@@ -1,7 +1,7 @@
 include(find_in_path("PatternDispatch/v2/PatternDispatch.jl"))
 
 module TestOps
-using PatternDispatch, PatternDispatch.Patterns
+using PatternDispatch.Patterns, PatternDispatch.Recode
 
 unordered(x,y) = !(x >= y || y >= x)
 

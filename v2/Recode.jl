@@ -2,7 +2,19 @@
 # Recode: function signature -> Pattern creating AST
 module Recode
 using Patterns, Toivo
-export recode
+export recode, @qpat, @ipat
+
+macro qpat(ex)
+    recode(ex)
+end
+macro ipat(ex)
+    c = Context()
+    recode(c, quot(argnode), ex)
+    quote
+        $(c.code...)
+        intension($(c.guards...))
+    end
+end
 
 type Context
     code::Vector
