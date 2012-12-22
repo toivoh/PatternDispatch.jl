@@ -64,96 +64,86 @@ function code_method(p::Pattern, body)
             (false, nothing)
         end 
     end)
-    @show p
-    @show fdef
     fdef
 end
 create_method(p::Pattern, body) = Method(p, eval(code_method(p,body)))
 
 
-# ---- sequence: construct an evaluation order --------------------------------
-
-type Seq
+# ---- sequence!: Create evaluation order, instantiate nodes into Result's ----
+ 
+type Sequence
     intent::Intension
-    evaluated::Dict{Node,Int}
-    guarded::Set{Predicate}
-    seq::Vector{Vector{Node}}
-
-    Seq(i::Intension) = new(i, Dict{Node,Int}(), Set{Predicate}(), Vector{Node}[Node[]])
+    results::Dict{Node,Node}
+    seq::Vector{Node}
 end
+Sequence(intent::Intension) = Sequence(intent,   Dict{Node,Node}(), Node[])
+Sequence(s::Sequence)       = Sequence(s.intent, copy(s.results),     Node[])
 
-function sequence_guard!(c::Seq, pred::Predicate)
-    if has(c.guarded, pred); return; end
-    add(c.guarded, pred)
+wrap(node::Guard) = node
+wrap(node::Node)  = Result(node)
 
-    sequence!(c, pred)
-    s = c.seq[end]
-    if length(s) == 0 || s[end] != pred; push(s, pred); end
-    push(c.seq, Node[])
-end
-
-function sequence!(c::Seq, node::Node)
-    if has(c.evaluated, node)
-        c.evaluated[node] += 1
+function sequence!(s::Sequence, node::Node)
+    if has(s.results, node)
+        newnode = s.results[node]
+        if isa(newnode, Result); newnode.nrefs += 1; end
         return
     end
 
-    for dep in depsof(node);  sequence!(c, dep)      end
-    for g in guardsof(c.intent, node);  sequence_guard!(c, g)  end
-    c.evaluated[node] = 1
-    push(c.seq[end], node)
+    for dep in depsof(s.intent, node);  sequence!(s, dep)  end
+    newnode = s.results[node] = wrap(subs(s.results, node))
+    push(s.seq, newnode)
 end
 
-type Encode
-    evaluated::Dict{Node,Int}
-    results::Dict{Node,Any}
-    Encode(evaluated::Dict{Node,Int}) = new(evaluated, Dict{Node,Any}())
-end
 
-function encode!(c::Encode, nodes::Vector, ispred::Bool)
-    exprs = {}
-    for node in nodes
-        ex = encode!(c, node)        
-        if ex != nothing; push(exprs, ex); end
-    end
-    if ispred
-        push(exprs, c.results[nodes[end]])
-    end
-    exprs
-end
-function encode!(c::Encode, node::Node)
-    if has(c.results, node); return c.results[node] end
-    ex = encode(c.results, node)
-    if isa(ex, Symbol) || c.evaluated[node] == 1
-        c.results[node] = ex
-        nothing
-    else
-        var = gensym("t")
-        c.results[node] = var
-        :( $var = $ex )
-    end
-end
-
-wrap(exprs::Vector) = length(exprs)==1 ? exprs[1] : expr(:block, exprs)
+# ---- code_match etc: generate code from (instantiated) node sequence --------
 
 function code_match(p::Pattern)
-    c = Seq(p.intent)
-    for g in guardsof(p.intent);    sequence_guard!(c, g)  end
-    for node in values(p.bindings); sequence!(c, node)     end
-
-    enc = Encode(c.evaluated)
-    preds = [wrap(encode!(enc, seq, true)) for seq in c.seq[1:end-1]]
-    prebind = encode!(enc, c.seq[end], false)
-    binds = { :( $name = $(enc.results[node])) for (name, node) in p.bindings }
+    sg = Sequence(p.intent)
+    for g in guardsof(p.intent);    sequence!(sg, Guard(g));     end
+    sb = Sequence(sg)
+    for node in values(p.bindings); sequence!(sb, node);  end
+    
+    pred = code_predicate(sg.seq)
+    prebind = encoded(sb.seq)
+    binds = { :( $name = $(sb.results[node].ex)) for (name,node) in p.bindings }
     bind = vcat(prebind, binds)
-
-    if isempty(preds)
-        pred = quot(true)
-    else
-        pred = preds[1]
-        for factor in preds[2:end]; pred = :($pred && $factor); end
-    end
+    
     pred, bind
+end
+
+function code_predicate(seq::Vector{Node})
+    code = {}
+    pred = nothing
+    for node in seq
+        if isa(node, Guard)
+            factor = isempty(code) ? node.pred.ex :  quote; $(code...); $(node.pred.ex) end
+            pred = pred === nothing ? factor : (:($pred && $factor))
+            code = {}
+        else
+            encode!(code, node)
+        end
+    end
+    pred
+end
+
+function encoded(seq::Vector{Node})
+    code = {}
+    for node in seq;  encode!(code, node);  end
+    code
+end
+
+encode!(code::Vector, ::Guard) = error("Undefined!")
+function encode!(code::Vector, node::Result)
+    if node.ex != nothing;  return  end
+    ex = encode(node.node)
+
+    if isa(ex, Symbol) || node.nrefs == 1
+        node.ex = ex
+    else
+        var = gensym("t")
+        node.ex = var
+        push(code, :( $var = $ex ))
+    end
 end
 
 
