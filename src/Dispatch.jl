@@ -1,6 +1,6 @@
 
 module Dispatch
-import Base.add, Base.>=
+import Base.add, Base.>=, Base.&
 using Patterns, Encode, Toivo
 export MethodTable, Method, dispatch
 
@@ -20,6 +20,8 @@ type Method
     body
 end
 
+const nomethod = Method(Pattern(anything), nothing)
+
 type MethodCall <: DNode
     m::Method
     bind_seq::Vector
@@ -29,19 +31,20 @@ type MethodCall <: DNode
 end
 
 type MethodNode
-    m
+    m::Method
     gt::Set{MethodNode}
 end
 MethodNode(m) = MethodNode(m, Set{MethodNode}())
 
 >=(x::MethodNode, y::MethodNode) = intentof(x) >= intentof(y)
 
-type NoMethod <: DNode; end
-const nomethod = NoMethod()
+type NoMethodNode <: DNode; end
+const nomethodnode = NoMethodNode()
 
-intentof(m::Method)     = m.sig.intent
-intentof(m::MethodNode) = intentof(m.m)
-intentof(::NoMethod)    = anything
+intentof(m::MethodNode) = m.m.sig.intent
+
+# (&)(m::Method,  i::Intension) = Method(m.sig & Pattern(i), m.body)
+# (&)(m::NoMethodNode, ::Intension) = nomethodnode
 
 type MethodTable
     name::Symbol
@@ -75,6 +78,26 @@ function code_dispatch(mt::MethodTable)
     fdef = :(($argsym...)->$code)    
 end
 create_dispatch(mt::MethodTable) = eval(code_dispatch(mt)) # todo: which eval?
+
+
+# function code_dispatch2(mt::MethodTable)
+#     ms = subtreeof(mt.top)
+#     tups = Set{Tuple}({julia_signature_of(m) for m in ms})
+#     for tup in tups
+#         code_dispatch(mt, ms, tup)
+#     end
+# end
+
+# function code_dispatch(mt::MethodTable, ms::Set{MethodNode}, tup::Tuple)
+#     # create new method nodes
+#     intent = julia_intension(tup)
+#     ms = {MethodNode(m.m & intent) for m in ms}
+#     # create new method DAG
+# #    top = MethodNode
+#     # todo: reuse bodies!    
+    
+# end
+
 
 
 # ---- update method DAG ------------------------------------------------------
@@ -118,7 +141,7 @@ end
 
 function build_dtree(top::MethodNode, ms::Set{MethodNode})
     if isempty(top.gt) || length(ms) == 1
-        isa(top.m, NoMethod) ? nomethod : MethodCall(top.m)
+        top.m.body === nothing ? nomethodnode : MethodCall(top.m)
     else        
         pivot = firstitem(top.gt & ms)
         below = subtreeof(pivot)
@@ -152,7 +175,7 @@ end
 
 # ---- code_dispatch: decision tree -> dispatch code --------------------------
 
-function code_dispatch(::NoMethod)
+function code_dispatch(::NoMethodNode)
     :( error("No matching pattern method found") )
 end
 function code_dispatch(m::MethodCall)

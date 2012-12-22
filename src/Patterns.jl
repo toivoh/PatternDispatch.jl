@@ -5,7 +5,7 @@ using Immutable, Toivo
 export Node, Predicate, Guard, Result
 export argsym, argnode, never, always, tupref, egalpred, typepred, subs
 export Intension, intension, naught, anything
-export encode, guardsof, depsof, resultof, julia_signature_of
+export encode, guardsof, depsof, resultof, julia_signature_of, julia_intension
 export Pattern
 
 
@@ -102,6 +102,10 @@ function intension(factors::Predicate...)
     Intension(gs)
 end
 
+function julia_intension(Ts::Tuple)
+    intension({typepred(tupref(argnode, k),T) for (k,T) in enumerate(Ts)}...)
+end
+
 (&)(x::Intension, y::Intension) = intension(guardsof(x)..., guardsof(y)...)
 isequal(x::Intension, y::Intension) = isequal(x.factors, y.factors)
 
@@ -129,6 +133,7 @@ type Pattern
     intent::Intension
     bindings::Dict{Symbol,Node}
 end
+Pattern(intent::Intension) = Pattern(intent, Dict{Symbol,Node}())
 
 julia_signature_of(p::Pattern) = julia_signature_of(p.intent)
 
