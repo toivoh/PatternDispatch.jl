@@ -48,10 +48,24 @@ type MethodTable
     top::MethodNode
     f::Function
 
-    MethodTable(name::Symbol) = new(name, MethodNode(nomethod))
+    function MethodTable(name::Symbol) 
+        mt = new(name, MethodNode(nomethod))
+        mt.f = rebuilder(mt)
+        mt
+    end
 end
 
-add(mt::MethodTable, m::Method) = insert!(mt.top, MethodNode(m))
+rebuilder(mt::MethodTable) = (args...)->begin
+        mt.f = create_dispatch(mt)
+        mt.f(args...)
+    end
+
+dispatch(mt::MethodTable, args) = mt.f(args...)
+
+function add(mt::MethodTable, m::Method)
+    insert!(mt.top, MethodNode(m))
+    mt.f = rebuilder(mt)
+end
 
 function code_dispatch(mt::MethodTable)
     dtree = build_dtree(mt.top, subtreeof(mt.top))
@@ -187,10 +201,9 @@ m3 = Method((@qpat (x,)),         :3)
 
 mt = MethodTable(:f)
 for m in [m3,m2,m1];  add(mt, m)  end
-f = create_dispatch(mt)
 
-@assert f(5)     == 1
-@assert f("foo") == 2
-@assert f(5.0)   == 3
+@assert mt.f(5)     == 1
+@assert mt.f("foo") == 2
+@assert mt.f(5.0)   == 3
 
 end # module
