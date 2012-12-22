@@ -1,7 +1,7 @@
 include(find_in_path("PatternDispatch.jl"))
 
 module TryMultiDispatch
-using PatternDispatch.Patterns, PatternDispatch.Recode
+using PatternDispatch.Patterns, PatternDispatch.Recode, PatternDispatch.Dispatch
 
 abstract DNode
 
@@ -9,11 +9,18 @@ type Decision <: DNode
     intent::Intension
     pass
     fail
+    seq::Vector
+
+    Decision(intent::Intension, pass, fail) = new(intent, pass, fail)
 end
 
 type Method <: DNode
     sig::Pattern
     body
+    bind_seq::Vector
+    bindings::Dict{Symbol,Node}
+
+    Method(sig::Pattern, body) = new(sig, body)
 end
 
 type NoMethod <: DNode; end
@@ -28,37 +35,48 @@ db = Decision(m1.sig.intent, m1, dc)
 da = Decision(m3.sig.intent, db, nomethod)
 
 
-function code_dispatch(results::Dict{Node,Any}, ::NoMethod)
+seq_dispatch!(results::ResultsDict, d::DNode) = nothing
+function seq_dispatch!(results::ResultsDict, m::Method)
+    s = Sequence(m.sig.intent, results) # shouldn't need an Intension...
+    for node in values(m.sig.bindings);  sequence!(s, node)  end
+    m.bind_seq = s.seq
+    m.bindings = (Symbol=>Node)[name => results[node] 
+                                for (name,node) in m.sig.bindings]
+end
+function seq_dispatch!(results::ResultsDict, d::Decision)
+    results_fail = copy(results)
+    s = Sequence(d.intent, results)
+    for g in guardsof(d.intent);  sequence!(s, Guard(g))  end
+    d.seq = s.seq
+
+    seq_dispatch!(results, d.pass)
+    seq_dispatch!(results_fail, d.fail)
+end
+
+function code_dispatch(::NoMethod)
     :( error("No matching pattern method found") )
 end
-function code_dispatch(results::Dict{Node,Any}, m::Method)
-    bind = code_bind(results, m.sig.bindings)
+function code_dispatch(m::Method)
+    prebind = encoded(m.bind_seq)
+    binds = { :( $name = $(resultof(node))) for (name,node) in m.bindings }
     quote
-        $(bind...)
+        $(prebind...)
+        $(binds...)
         $(m.body)
     end
 end
-function code_dispatch(results::Dict{Node,Any}, d::Decision)
-    results_fail = copy(results)
-    pre, pred = code_match(results, d.intent)
-    pass = code_dispatch(results, d.pass)
-    fail = code_dispatch(results_fail, d.fail)
+function code_dispatch(d::Decision)
+    pred = code_predicate(d.seq)
+    pass = code_dispatch(d.pass)
+    fail = code_dispatch(d.fail)
     code = :( if $pred; $pass; else; $fail; end )
-    length(pre) == 0 ? code : (quote; $(pre...); $code; end)
+    #length(pre) == 0 ? code : (quote; $(pre...); $code; end)
+    code
 end
 
-function code_bind(results::Dict{Node,Any}, bindings::Dict{Symbol,Node})
-    
-end
-function code_match(results::Dict{Node,Any}, intent::Intension)
-    for g in guardsof(intent)
-        
-    end
-    pre, pred
-end
+seq_dispatch!(ResultsDict(), da)
+code = code_dispatch(da)
+show(code)
 
-
-# code_bind
-# code_match
 
 end # module
