@@ -9,6 +9,10 @@ using PatternDispatch, PatternDispatch.Patterns, PatternDispatch.Dispatch
 @pattern f(2.5) = 11
 
 mt = PatternDispatch.method_tables[f]
-Dispatch.code_dispatch2(mt)
+Dispatch.create_dispatch2(mt)
+
+@show f(4)
+@show f(1)
+@show f(2.5)
 
 end # module

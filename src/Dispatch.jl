@@ -63,6 +63,7 @@ function add(mt::MethodTable, m::Method)
     insert!(mt.top, MethodNode(m))
     # todo: only when necessary
     create_dispatch(mt)
+#    create_dispatch2(mt)
 end
 
 code_dispatch(top::MethodNode) = code_dispatch(top, ResultsDict())
@@ -82,18 +83,18 @@ function create_dispatch(mt::MethodTable)
 end
 
 
-function code_dispatch2(mt::MethodTable)
+function create_dispatch2(mt::MethodTable)
     ms = subtreeof(mt.top)
     if mt.top.m.body === nothing
         del(ms, mt.top) # don't take the signature from nomethod
     end
     tups = Set{Tuple}({julia_signature_of(m.m.sig) for m in ms}...)
     for tup in tups
-        code_dispatch(mt, ms, tup)
+        create_dispatch(mt, ms, tup)
     end
 end
 
-function code_dispatch(mt::MethodTable, ms::Set{MethodNode}, tup::Tuple)
+function create_dispatch(mt::MethodTable, ms::Set{MethodNode}, tup::Tuple)
     # create new method nodes
     intent = julia_intension(tup)
     #methods = {m.m & intent for m in ms}
@@ -120,6 +121,11 @@ function code_dispatch(mt::MethodTable, ms::Set{MethodNode}, tup::Tuple)
         end
     end
     @show fdef
+
+    eval(:(let
+            const f = $(mt.f)
+            f($(args...)) = $code
+        end))
 
     # todo: reuse bodies!    
     # todo: respect declaration order among collisions?
