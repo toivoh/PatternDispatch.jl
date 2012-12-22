@@ -3,7 +3,7 @@ module Dispatch
 import Base.add
 using Patterns, Toivo
 export MethodTable, create_method, dispatch
-
+export ResultsDict, Sequence, sequence!, code_predicate, encoded # temporary
 
 # ==== MethodTable ============================================================
 
@@ -70,14 +70,17 @@ create_method(p::Pattern, body) = Method(p, eval(code_method(p,body)))
 
 
 # ---- sequence!: Create evaluation order, instantiate nodes into Result's ----
- 
+
+typealias ResultsDict Dict{Node,Node}
 type Sequence
     intent::Intension
-    results::Dict{Node,Node}
+    results::ResultsDict
     seq::Vector{Node}
+
+    Sequence(i::Intension, r::ResultsDict) = new(i, r, Node[])
 end
-Sequence(intent::Intension) = Sequence(intent,   Dict{Node,Node}(), Node[])
-Sequence(s::Sequence)       = Sequence(s.intent, copy(s.results),     Node[])
+Sequence(intent::Intension) = Sequence(intent,   ResultsDict())
+Sequence(s::Sequence)       = Sequence(s.intent, copy(s.results))
 
 wrap(node::Guard) = node
 wrap(node::Node)  = Result(node)

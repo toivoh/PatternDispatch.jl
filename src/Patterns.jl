@@ -5,7 +5,7 @@ using Immutable, Toivo
 export Node, Predicate, Guard, Result
 export argsym, argnode, never, always, tupref, egalpred, typepred, subs
 export Intension, intension, naught, anything
-export encode, guardsof, depsof
+export encode, guardsof, depsof, resultof
 export Pattern
 
 
