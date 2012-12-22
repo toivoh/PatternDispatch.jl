@@ -27,17 +27,42 @@ type MethodCall <: DNode
     MethodCall(m::Method) = new(m)
 end
 
+type MethodNode
+    m
+    gt::Set{MethodNode}
+end
+
 type NoMethod <: DNode; end
 const nomethod = NoMethod()
 
-m1 = Method((@qpat (x::Int,)),    :1)
-m2 = Method((@qpat (x::String,)), :2)
-m3 = Method((@qpat (x,)),         :3)
+intentof(m::MethodNode) = m.m.sig.intent
 
-dc = Decision(m2.sig.intent, MethodCall(m2), MethodCall(m3))
-db = Decision(m1.sig.intent, MethodCall(m1), dc)
-da = Decision(m3.sig.intent, db, nomethod)
 
+# ---- create decision tree ---------------------------------------------------
+
+firstitem(iter) = next(iter, start(iter))[1]
+
+subtreeof(m::MethodNode) = (sub = Set{MethodNode}(); visit_gt!(sub, m); sub)
+function visit_gt!(seen::Set{MethodNode}, m::MethodNode)
+    if has(seen, m); return; end
+    add(seen, m)
+    for below in m.gt; visit_gt!(seen, below); end       
+end
+
+function build_dtree(top::MethodNode, ms::Set{MethodNode})
+    if isempty(top.gt) || length(ms) == 1
+        isa(top.m, NoMethod) ? nomethod : MethodCall(top.m)
+    else        
+        pivot = firstitem(top.gt & ms)
+        below = subtreeof(pivot)
+        pass = build_dtree(pivot, ms & below)
+        fail = build_dtree(top,   ms - below)
+        Decision(intentof(pivot), pass, fail)
+    end    
+end
+
+
+# ---- seq_dispatch! ----------------------------------------------------------
 
 seq_dispatch!(results::ResultsDict, d::DNode) = nothing
 function seq_dispatch!(results::ResultsDict, m::MethodCall)
@@ -78,8 +103,26 @@ function code_dispatch(d::Decision)
     code
 end
 
-seq_dispatch!(ResultsDict(), da)
-code = code_dispatch(da)
+# ---- test code ----
+
+m1 = Method((@qpat (x::Int,)),    :1)
+m2 = Method((@qpat (x::String,)), :2)
+m3 = Method((@qpat (x,)),         :3)
+
+node1 = MethodNode(m1, Set{MethodNode}())
+node2 = MethodNode(m2, Set{MethodNode}())
+node3 = MethodNode(m3, Set{MethodNode}(node1, node2))
+top   = MethodNode(nomethod, Set{MethodNode}(node3))
+mnodes = Set{MethodNode}(top, node1, node2, node3)
+
+# dc = Decision(m2.sig.intent, MethodCall(m2), MethodCall(m3))
+# db = Decision(m1.sig.intent, MethodCall(m1), dc)
+# da = Decision(m3.sig.intent, db, nomethod)
+
+dtree = build_dtree(top, mnodes)
+
+seq_dispatch!(ResultsDict(), dtree)
+code = code_dispatch(dtree)
 println(code)
 fdef = :(($argsym...)->$code)
 
