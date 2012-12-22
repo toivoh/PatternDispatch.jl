@@ -1,7 +1,7 @@
 include(find_in_path("PatternDispatch.jl"))
 
 module TryMultiDispatch
-import Base.>=
+import Base.>=, Base.add
 using PatternDispatch.Patterns, PatternDispatch.Recode, PatternDispatch.Dispatch
 
 abstract DNode
@@ -43,11 +43,30 @@ intentof(m::Method)     = m.sig.intent
 intentof(m::MethodNode) = intentof(m.m)
 intentof(::NoMethod)    = anything
 
+type MethodTable
+    name::Symbol
+    top::MethodNode
+    f::Function
+
+    MethodTable(name::Symbol) = new(name, MethodNode(nomethod))
+end
+
+add(mt::MethodTable, m::Method) = insert!(mt.top, MethodNode(m))
+
+function code_dispatch(mt::MethodTable)
+    dtree = build_dtree(mt.top, subtreeof(mt.top))
+
+    seq_dispatch!(ResultsDict(), dtree)
+    code = code_dispatch(dtree)
+    fdef = :(($argsym...)->$code)    
+end
+create_dispatch(mt::MethodTable) = eval(code_dispatch(mt)) # todo: which eval?
+
 
 # ---- update method DAG ------------------------------------------------------
 
-insert!(m::MethodNode, at::MethodNode) = insert!(Set{MethodNode}(), m, at)
-function insert!(seen::Set{MethodNode}, m::MethodNode, at::MethodNode)
+insert!(at::MethodNode, m::MethodNode) = insert!(Set{MethodNode}(), at, m)
+function insert!(seen::Set{MethodNode}, at::MethodNode, m::MethodNode)
     if has(seen, at); return; end
     add(seen, at)
     if m >= at
@@ -59,7 +78,7 @@ function insert!(seen::Set{MethodNode}, m::MethodNode, at::MethodNode)
         add(m.gt, at)
         at_above_m = false
     else
-        at_above_m = any([insert!(seen, m, below) for below in at.gt])
+        at_above_m = any([insert!(seen, below, m) for below in at.gt])
     end
     if !at_above_m
         if at >= m
@@ -143,12 +162,6 @@ m1 = Method((@qpat (x::Int,)),    :1)
 m2 = Method((@qpat (x::String,)), :2)
 m3 = Method((@qpat (x,)),         :3)
 
-top = MethodNode(nomethod)
-for m in [m3,m2,m1];  insert!(MethodNode(m), top)  end
-mnodes = subtreeof(top)
-
-dtree = build_dtree(top, mnodes)
-
 # node1 = MethodNode(m1, Set{MethodNode}())
 # node2 = MethodNode(m2, Set{MethodNode}())
 # node3 = MethodNode(m3, Set{MethodNode}(node1, node2))
@@ -159,12 +172,22 @@ dtree = build_dtree(top, mnodes)
 # db = Decision(m1.sig.intent, MethodCall(m1), dc)
 # da = Decision(m3.sig.intent, db, nomethod)
 
-seq_dispatch!(ResultsDict(), dtree)
-code = code_dispatch(dtree)
-println(code)
-fdef = :(($argsym...)->$code)
+# top = MethodNode(nomethod)
+# for m in [m3,m2,m1];  insert!(top, MethodNode(m))  end
+# mnodes = subtreeof(top)
 
-f = eval(fdef)
+# dtree = build_dtree(top, mnodes)
+
+# seq_dispatch!(ResultsDict(), dtree)
+# code = code_dispatch(dtree)
+# println(code)
+# fdef = :(($argsym...)->$code)
+
+# f = eval(fdef)
+
+mt = MethodTable(:f)
+for m in [m3,m2,m1];  add(mt, m)  end
+f = create_dispatch(mt)
 
 @assert f(5)     == 1
 @assert f("foo") == 2
