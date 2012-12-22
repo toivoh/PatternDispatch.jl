@@ -45,7 +45,7 @@ function code_pattern(ex)
             mt = method_tables[$f]
         end
 
-        method = create_method($p_ex, $(quot(body)))
+        method = Method($p_ex, $(quot(body)))
         add(mt, method)
     end
 end
