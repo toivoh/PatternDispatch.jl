@@ -21,6 +21,7 @@ type Method
 end
 
 const nomethod = Method(Pattern(anything), nothing)
+(&)(m::Method,  i::Intension) = Method(m.sig & Pattern(i), m.body)
 
 type MethodCall <: DNode
     m::Method
@@ -37,14 +38,10 @@ end
 MethodNode(m) = MethodNode(m, Set{MethodNode}())
 
 >=(x::MethodNode, y::MethodNode) = intentof(x) >= intentof(y)
+intentof(m::MethodNode) = m.m.sig.intent
 
 type NoMethodNode <: DNode; end
 const nomethodnode = NoMethodNode()
-
-intentof(m::MethodNode) = m.m.sig.intent
-
-# (&)(m::Method,  i::Intension) = Method(m.sig & Pattern(i), m.body)
-# (&)(m::NoMethodNode, ::Intension) = nomethodnode
 
 type MethodTable
     name::Symbol
@@ -70,33 +67,63 @@ function add(mt::MethodTable, m::Method)
     mt.f = rebuilder(mt)
 end
 
-function code_dispatch(mt::MethodTable)
-    dtree = build_dtree(mt.top, subtreeof(mt.top))
+code_dispatch(top::MethodNode) = code_dispatch(top, ResultsDict())
+function code_dispatch(top::MethodNode, pre_results::ResultsDict)
+    dtree = build_dtree(top, subtreeof(top))
 
-    seq_dispatch!(ResultsDict(), dtree)
+    seq_dispatch!(pre_results, dtree)
     code = code_dispatch(dtree)
+end
+function code_dispatch(mt::MethodTable)
+    code = code_dispatch(mt.top)
     fdef = :(($argsym...)->$code)    
 end
 create_dispatch(mt::MethodTable) = eval(code_dispatch(mt)) # todo: which eval?
 
 
-# function code_dispatch2(mt::MethodTable)
-#     ms = subtreeof(mt.top)
-#     tups = Set{Tuple}({julia_signature_of(m) for m in ms})
-#     for tup in tups
-#         code_dispatch(mt, ms, tup)
-#     end
-# end
+function code_dispatch2(mt::MethodTable)
+    ms = subtreeof(mt.top)
+    if mt.top.m.body === nothing
+        del(ms, mt.top) # don't take the signature from nomethod
+    end
+    tups = Set{Tuple}({julia_signature_of(m.m.sig) for m in ms}...)
+    for tup in tups
+        code_dispatch(mt, ms, tup)
+    end
+end
 
-# function code_dispatch(mt::MethodTable, ms::Set{MethodNode}, tup::Tuple)
-#     # create new method nodes
-#     intent = julia_intension(tup)
-#     ms = {MethodNode(m.m & intent) for m in ms}
-#     # create new method DAG
-# #    top = MethodNode
-#     # todo: reuse bodies!    
+function code_dispatch(mt::MethodTable, ms::Set{MethodNode}, tup::Tuple)
+    # create new method nodes
+    intent = julia_intension(tup)
+    #methods = {m.m & intent for m in ms}
+    methods = {filter(m->(!(m.sig.intent === naught)), 
+                      {m.m & intent for m in ms})...}
+
+    # create new method DAG
+    top = MethodNode(Method(Pattern(intent), nothing))
+    for m in methods;  insert!(top, MethodNode(m))  end
     
-# end
+    # create dispatch code using given assumptions and args
+    results = ResultsDict()
+    for pred in guardsof(intent);  preguard!(results, Guard(pred));  end
+    argsyms = {gensym("arg") for k=1:length(tup)}
+    for (k, argsym) in enumerate(argsyms)
+        provide!(results, tupref(argnode, k), argsym)
+    end
+
+    code = code_dispatch(top, results)
+    args = {:($argsym::$(quot(T))) for (argsym,T) in zip(argsyms,tup)}
+    fdef = quote
+        function f($(args...))
+            $code
+        end
+    end
+    @show fdef
+
+    # todo: reuse bodies!    
+    # todo: respect declaration order among collisions?
+    
+end
 
 
 

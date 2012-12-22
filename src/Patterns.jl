@@ -103,7 +103,8 @@ function intension(factors::Predicate...)
 end
 
 function julia_intension(Ts::Tuple)
-    intension({typepred(tupref(argnode, k),T) for (k,T) in enumerate(Ts)}...)
+    intension(typepred(argnode, NTuple{length(Ts),Any}),
+              {typepred(tupref(argnode, k),T) for (k,T) in enumerate(Ts)}...)
 end
 
 (&)(x::Intension, y::Intension) = intension(guardsof(x)..., guardsof(y)...)

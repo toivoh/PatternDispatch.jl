@@ -2,6 +2,7 @@
 module Encode
 using Patterns, Toivo
 export ResultsDict, Sequence, sequence!, code_predicate, encoded
+export preguard!, provide!
 
 
 # ---- sequence!: Create evaluation order, instantiate nodes into Result's ----
@@ -30,6 +31,13 @@ function sequence!(s::Sequence, node::Node)
     for dep in depsof(s.intent, node);  sequence!(s, dep)  end
     newnode = s.results[node] = wrap(subs(s.results, node))
     push(s.seq, newnode)
+end
+
+preguard!(results::ResultsDict, g::Guard) = (results[g] = Guard(always))
+function provide!(results::ResultsDict, node::Node, ex)
+    res = Result(node)
+    res.ex = ex
+    results[node] = res
 end
 
 
