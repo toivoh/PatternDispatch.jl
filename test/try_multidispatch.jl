@@ -1,6 +1,7 @@
 include(find_in_path("PatternDispatch.jl"))
 
 module TryMultiDispatch
+import Base.>=
 using PatternDispatch.Patterns, PatternDispatch.Recode, PatternDispatch.Dispatch
 
 abstract DNode
@@ -31,22 +32,55 @@ type MethodNode
     m
     gt::Set{MethodNode}
 end
+MethodNode(m) = MethodNode(m, Set{MethodNode}())
+
+>=(x::MethodNode, y::MethodNode) = intentof(x) >= intentof(y)
 
 type NoMethod <: DNode; end
 const nomethod = NoMethod()
 
-intentof(m::MethodNode) = m.m.sig.intent
+intentof(m::Method)     = m.sig.intent
+intentof(m::MethodNode) = intentof(m.m)
+intentof(::NoMethod)    = anything
+
+
+# ---- update method DAG ------------------------------------------------------
+
+insert!(m::MethodNode, at::MethodNode) = insert!(Set{MethodNode}(), m, at)
+function insert!(seen::Set{MethodNode}, m::MethodNode, at::MethodNode)
+    if has(seen, at); return; end
+    add(seen, at)
+    if m >= at
+        if at >= m 
+            at.m = m.m  # at == m
+            return true
+        end
+        # m > at
+        add(m.gt, at)
+        at_above_m = false
+    else
+        at_above_m = any([insert!(seen, m, below) for below in at.gt])
+    end
+    if !at_above_m
+        if at >= m
+            del_each(at.gt, m.gt)
+            add(at.gt, m)
+            at_above_m = true
+        end
+    end
+    at_above_m
+end
 
 
 # ---- create decision tree ---------------------------------------------------
 
 firstitem(iter) = next(iter, start(iter))[1]
 
-subtreeof(m::MethodNode) = (sub = Set{MethodNode}(); visit_gt!(sub, m); sub)
-function visit_gt!(seen::Set{MethodNode}, m::MethodNode)
+subtreeof(m::MethodNode) = (sub = Set{MethodNode}(); addsubtree!(sub, m); sub)
+function addsubtree!(seen::Set{MethodNode}, m::MethodNode)
     if has(seen, m); return; end
     add(seen, m)
-    for below in m.gt; visit_gt!(seen, below); end       
+    for below in m.gt; addsubtree!(seen, below); end       
 end
 
 function build_dtree(top::MethodNode, ms::Set{MethodNode})
@@ -109,17 +143,21 @@ m1 = Method((@qpat (x::Int,)),    :1)
 m2 = Method((@qpat (x::String,)), :2)
 m3 = Method((@qpat (x,)),         :3)
 
-node1 = MethodNode(m1, Set{MethodNode}())
-node2 = MethodNode(m2, Set{MethodNode}())
-node3 = MethodNode(m3, Set{MethodNode}(node1, node2))
-top   = MethodNode(nomethod, Set{MethodNode}(node3))
-mnodes = Set{MethodNode}(top, node1, node2, node3)
+top = MethodNode(nomethod)
+for m in [m3,m2,m1];  insert!(MethodNode(m), top)  end
+mnodes = subtreeof(top)
+
+dtree = build_dtree(top, mnodes)
+
+# node1 = MethodNode(m1, Set{MethodNode}())
+# node2 = MethodNode(m2, Set{MethodNode}())
+# node3 = MethodNode(m3, Set{MethodNode}(node1, node2))
+# top   = MethodNode(nomethod, Set{MethodNode}(node3))
+# mnodes = Set{MethodNode}(top, node1, node2, node3)
 
 # dc = Decision(m2.sig.intent, MethodCall(m2), MethodCall(m3))
 # db = Decision(m1.sig.intent, MethodCall(m1), dc)
 # da = Decision(m3.sig.intent, db, nomethod)
-
-dtree = build_dtree(top, mnodes)
 
 seq_dispatch!(ResultsDict(), dtree)
 code = code_dispatch(dtree)
