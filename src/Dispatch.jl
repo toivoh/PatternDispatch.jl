@@ -48,23 +48,14 @@ type MethodTable
     top::MethodNode
     f::Function
 
-    function MethodTable(name::Symbol) 
-        mt = new(name, MethodNode(nomethod))
-        mt.f = rebuilder(mt)
-        mt
-    end
+    MethodTable(name::Symbol) = new(name, MethodNode(nomethod))
 end
-
-rebuilder(mt::MethodTable) = (args...)->begin
-        mt.f = create_dispatch(mt)
-        mt.f(args...)
-    end
 
 dispatch(mt::MethodTable, args) = mt.f(args...)
 
 function add(mt::MethodTable, m::Method)
     insert!(mt.top, MethodNode(m))
-    mt.f = rebuilder(mt)
+    mt.f = create_dispatch(mt) # todo: only when necessary
 end
 
 code_dispatch(top::MethodNode) = code_dispatch(top, ResultsDict())
