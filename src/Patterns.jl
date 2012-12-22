@@ -2,7 +2,7 @@
 module Patterns
 import Base.&, Base.isequal, Base.>=, Base.>, Base.<=, Base.<, Base.show
 using Immutable, Toivo
-export Node, Predicate
+export Node, Predicate, Guard, Result
 export argsym, argnode, never, always, tupref, egalpred, typepred, subs
 export Intension, intension, naught, anything
 export encode, guardsof, depsof
@@ -26,6 +26,18 @@ const always  = Always()
 @immutable type Egal     <: Predicate;  arg::Node; value;       end
 @immutable type Isa      <: Predicate;  arg::Node; typ;         end
 
+@immutable type Guard <: Node{None}
+    pred::Predicate
+end
+type Result{T} <: Node{T}
+    node::Node{T}
+    nrefs::Int
+    ex
+    
+    Result(node::Node{T}) = new(node, 1, nothing)
+end
+Result{T}(node::Node{T}) = Result{T}(node)
+
 tupref(  arg::Node, index::Int) = TupleRef(arg, index)
 egalpred(arg::Node, value)      = Egal(arg, value)
 
@@ -37,15 +49,13 @@ subs(d::Dict, node::Union(Arg, Never, Always)) = node
 subs(d::Dict, node::TupleRef) = TupleRef(d[node.arg], node.index)
 subs(d::Dict, node::Egal)     = Egal(    d[node.arg], node.value)
 subs(d::Dict, node::Isa)      = Isa(     d[node.arg], node.typ)
+subs(d::Dict, node::Guard)    = Guard(   d[node.pred])
 
-depsof(node::Union(Arg, Never, Always))  = []
-depsof(node::Union(TupleRef, Egal, Isa)) = [node.arg]
-
-encode(results, v::Arg)      = argsym
-encode(results, v::TupleRef) = :( $(results[v.arg])[$(v.index)] )
-encode(results, g::Egal)     = :(is( $(results[g.arg]), $(quot(g.value))))
-encode(results, g::Isa)      = :(isa($(results[g.arg]), $(quot(g.typ  ))))
-
+resultof(node::Result) = (@assert node.ex != nothing; node.ex)
+encode(v::Arg)      = argsym
+encode(v::TupleRef) = :( $(resultof(v.arg))[$(v.index)] )
+encode(g::Egal)     = :(is( $(resultof(g.arg)), $(quot(g.value))))
+encode(g::Isa)      = :(isa($(resultof(g.arg)), $(quot(g.typ  ))))
 
 # (&)(::Never,     ::Never) = never
 # (&)(::Predicate, ::Never) = never
@@ -69,8 +79,12 @@ end
 
 guardsof(x::Intension) = values(x.factors)
 
-guardsof(i::Intension, node::Node)     = [] 
-guardsof(i::Intension, node::TupleRef) = [i.factors[node.arg]]
+depsof(node::Union(Arg, Never, Always))  = []
+depsof(node::Union(TupleRef, Egal, Isa)) = [node.arg]
+depsof(node::Guard)                      = [node.pred]
+
+depsof(i::Intension,node::Node)     = depsof(node)
+depsof(i::Intension,node::TupleRef) = Node[node.arg,Guard(i.factors[node.arg])]
 
 
 const naught   = Intension((Node=>Predicate)[argnode => never])
@@ -164,35 +178,5 @@ function showpat(io::IO, users::Dict, node::Node)
         k += 1
     end
 end
-
-
-
-# ---- Addons for try_sequence ----
-export Guard, Result
-
-@immutable type Guard <: Node{None}
-    pred::Predicate
-end
-type Result{T} <: Node{T}
-    node::Node{T}
-    nrefs::Int
-    ex
-    
-    Result(node::Node{T}) = new(node, 1, nothing)
-end
-Result{T}(node::Node{T}) = Result{T}(node)
-
-depsof(node::Guard) = [node.pred]
-subs(d::Dict, node::Guard) = Guard(d[node.pred])
-
-depsof(i::Intension,node::Node)     = depsof(node)
-depsof(i::Intension,node::TupleRef) = Node[node.arg,Guard(i.factors[node.arg])]
-
-resultof(node::Result) = (@assert node.ex != nothing; node.ex)
-
-encode(v::Arg)      = argsym
-encode(v::TupleRef) = :( $(resultof(v.arg))[$(v.index)] )
-encode(g::Egal)     = :(is( $(resultof(g.arg)), $(quot(g.value))))
-encode(g::Isa)      = :(isa($(resultof(g.arg)), $(quot(g.typ  ))))
 
 end # module
