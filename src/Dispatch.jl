@@ -48,14 +48,21 @@ type MethodTable
     top::MethodNode
     f::Function
 
-    MethodTable(name::Symbol) = new(name, MethodNode(nomethod))
+    function MethodTable(name::Symbol) 
+        f = eval(:(let
+                $name(args...) = error("No matching pattern method found")
+                $name
+            end))
+        new(name, MethodNode(nomethod), f)
+    end
 end
 
 dispatch(mt::MethodTable, args) = mt.f(args...)
 
 function add(mt::MethodTable, m::Method)
     insert!(mt.top, MethodNode(m))
-    mt.f = create_dispatch(mt) # todo: only when necessary
+    # todo: only when necessary
+    create_dispatch(mt)
 end
 
 code_dispatch(top::MethodNode) = code_dispatch(top, ResultsDict())
@@ -65,11 +72,14 @@ function code_dispatch(top::MethodNode, pre_results::ResultsDict)
     seq_dispatch!(pre_results, dtree)
     code = code_dispatch(dtree)
 end
-function code_dispatch(mt::MethodTable)
+function create_dispatch(mt::MethodTable)
     code = code_dispatch(mt.top)
-    fdef = :(($argsym...)->$code)    
+    # todo: which eval?
+    eval(:(let
+            const f = $(mt.f)
+            f($argsym...) = $code
+        end))
 end
-create_dispatch(mt::MethodTable) = eval(code_dispatch(mt)) # todo: which eval?
 
 
 function code_dispatch2(mt::MethodTable)
