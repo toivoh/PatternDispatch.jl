@@ -14,13 +14,17 @@ type Decision <: DNode
     Decision(intent::Intension, pass, fail) = new(intent, pass, fail)
 end
 
-type Method <: DNode
+type Method
     sig::Pattern
     body
+end
+
+type MethodCall <: DNode
+    m::Method
     bind_seq::Vector
     bindings::Dict{Symbol,Node}
 
-    Method(sig::Pattern, body) = new(sig, body)
+    MethodCall(m::Method) = new(m)
 end
 
 type NoMethod <: DNode; end
@@ -30,18 +34,18 @@ m1 = Method((@qpat (x::Int,)),    :1)
 m2 = Method((@qpat (x::String,)), :2)
 m3 = Method((@qpat (x,)),         :3)
 
-dc = Decision(m2.sig.intent, m2, m3)
-db = Decision(m1.sig.intent, m1, dc)
+dc = Decision(m2.sig.intent, MethodCall(m2), MethodCall(m3))
+db = Decision(m1.sig.intent, MethodCall(m1), dc)
 da = Decision(m3.sig.intent, db, nomethod)
 
 
 seq_dispatch!(results::ResultsDict, d::DNode) = nothing
-function seq_dispatch!(results::ResultsDict, m::Method)
-    s = Sequence(m.sig.intent, results) # shouldn't need an Intension...
-    for node in values(m.sig.bindings);  sequence!(s, node)  end
+function seq_dispatch!(results::ResultsDict, m::MethodCall)
+    s = Sequence(m.m.sig.intent, results) # shouldn't need an Intension...
+    for node in values(m.m.sig.bindings);  sequence!(s, node)  end
     m.bind_seq = s.seq
     m.bindings = (Symbol=>Node)[name => results[node] 
-                                for (name,node) in m.sig.bindings]
+                                for (name,node) in m.m.sig.bindings]
 end
 function seq_dispatch!(results::ResultsDict, d::Decision)
     results_fail = copy(results)
@@ -56,13 +60,13 @@ end
 function code_dispatch(::NoMethod)
     :( error("No matching pattern method found") )
 end
-function code_dispatch(m::Method)
+function code_dispatch(m::MethodCall)
     prebind = encoded(m.bind_seq)
     binds = { :( $name = $(resultof(node))) for (name,node) in m.bindings }
     quote
         $(prebind...)
         $(binds...)
-        $(m.body)
+        $(m.m.body)
     end
 end
 function code_dispatch(d::Decision)
