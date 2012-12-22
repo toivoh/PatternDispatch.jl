@@ -5,7 +5,7 @@ using Immutable, Toivo
 export Node, Predicate, Guard, Result
 export argsym, argnode, never, always, tupref, egalpred, typepred, subs
 export Intension, intension, naught, anything
-export encode, guardsof, depsof, resultof
+export encode, guardsof, depsof, resultof, julia_signature_of
 export Pattern
 
 
@@ -110,6 +110,18 @@ isequal(x::Intension, y::Intension) = isequal(x.factors, y.factors)
 <=(x::Intension, y::Intension) = y >= x
 <( x::Intension, y::Intension) = y >  x
 
+get_type(g::Isa)  = g.typ
+get_type(g::Egal) = typeof(g.value)
+function get_type(intent::Intension, node::Node)
+    has(intent.factors, node) ? get_type(intent.factors[node]) : Any
+end
+function julia_signature_of(intent::Intension)
+    garg::Isa = intent.factors[argnode]
+    @assert garg.typ <: Tuple
+    nargs = length(garg.typ)
+    tuple({get_type(intent, tupref(argnode, k)) for k=1:nargs}...)
+end
+
 
 # ---- Pattern ----------------------------------------------------------------
 
@@ -117,6 +129,8 @@ type Pattern
     intent::Intension
     bindings::Dict{Symbol,Node}
 end
+
+julia_signature_of(p::Pattern) = julia_signature_of(p.intent)
 
 function (&)(p::Pattern, q::Pattern)
     bindings = merge(p.bindings, q.bindings)
