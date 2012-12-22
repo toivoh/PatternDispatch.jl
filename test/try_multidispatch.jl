@@ -76,7 +76,13 @@ end
 
 seq_dispatch!(ResultsDict(), da)
 code = code_dispatch(da)
-show(code)
+println(code)
+fdef = :(($argsym...)->$code)
 
+f = eval(fdef)
+
+@assert f(5)     == 1
+@assert f("foo") == 2
+@assert f(5.0)   == 3
 
 end # module
