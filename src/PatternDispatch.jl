@@ -8,11 +8,12 @@ export @pattern
 include(find_in_path("PatternDispatch/src/PartialOrder.jl"))
 include(find_in_path("PatternDispatch/src/Immutable.jl"))
 include(find_in_path("PatternDispatch/src/Patterns.jl"))
+include(find_in_path("PatternDispatch/src/Nodes.jl"))
 include(find_in_path("PatternDispatch/src/Recode.jl"))
 include(find_in_path("PatternDispatch/src/Encode.jl"))
 include(find_in_path("PatternDispatch/src/DecisionTree.jl"))
 include(find_in_path("PatternDispatch/src/Dispatch.jl"))
-using Patterns, Recode, Dispatch
+using Patterns, Nodes, Recode, Dispatch
 
 
 const method_tables = Dict{Function, MethodTable}()

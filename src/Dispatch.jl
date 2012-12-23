@@ -1,6 +1,7 @@
 
 module Dispatch
 import Base.add
+import Nodes
 using PartialOrder, Patterns, DecisionTree, Toivo
 export MethodTable, Method, dispatch
 
@@ -32,7 +33,7 @@ function create_dispatch(mt::MethodTable)
     # todo: which eval?
     eval(:(let
             const f = $(mt.f)
-            f($argsym...) = $code
+            f($(Nodes.argsym)...) = $code
         end))
 end
 
@@ -65,7 +66,7 @@ function create_dispatch(mt::MethodTable, ms::Set{MethodNode}, tup::Tuple)
     for pred in guardsof(intent);  preguard!(results, Guard(pred));  end
     argsyms = {gensym("arg") for k=1:length(tup)}
     for (k, argsym) in enumerate(argsyms)
-        provide!(results, tupref(argnode, k), argsym)
+        provide!(results, Nodes.tupref(Nodes.argnode, k), Nodes.argsym)
     end
 
     code = code_dispatch(top, results)
