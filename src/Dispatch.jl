@@ -1,7 +1,8 @@
 
 module Dispatch
 import Base.add, Base.>=, Base.&
-using Patterns, Encode, Toivo
+import PartialOrder
+using PartialOrder, Patterns, Encode, Toivo
 export MethodTable, Method, dispatch
 
 abstract DNode
@@ -19,6 +20,8 @@ type Method
     sig::Pattern
     body
 end
+>=(x::Method, y::Method) = x.sig.intent >= y.sig.intent
+
 
 const nomethod = Method(Pattern(anything), nothing)
 (&)(m::Method,  i::Intension) = Method(m.sig & Pattern(i), m.body)
@@ -31,14 +34,8 @@ type MethodCall <: DNode
     MethodCall(m::Method) = new(m)
 end
 
-type MethodNode
-    m::Method
-    gt::Set{MethodNode}
-end
-MethodNode(m) = MethodNode(m, Set{MethodNode}())
-
->=(x::MethodNode, y::MethodNode) = intentof(x) >= intentof(y)
-intentof(m::MethodNode) = m.m.sig.intent
+typealias MethodNode PartialOrder.Node{Method}
+intentof(m::MethodNode) = m.value.sig.intent
 
 type NoMethodNode <: DNode; end
 const nomethodnode = NoMethodNode()
@@ -68,7 +65,7 @@ end
 
 code_dispatch(top::MethodNode) = code_dispatch(top, ResultsDict())
 function code_dispatch(top::MethodNode, pre_results::ResultsDict)
-    dtree = build_dtree(top, subtreeof(top))
+    dtree = build_dtree(top, subDAGof(top))
 
     seq_dispatch!(pre_results, dtree)
     code = code_dispatch(dtree)
@@ -84,11 +81,11 @@ end
 
 
 function create_dispatch2(mt::MethodTable)
-    ms = subtreeof(mt.top)
-    if mt.top.m.body === nothing
+    ms = subDAGof(mt.top)
+    if mt.top.value.body === nothing
         del(ms, mt.top) # don't take the signature from nomethod
     end
-    tups = Set{Tuple}({julia_signature_of(m.m.sig) for m in ms}...)
+    tups = Set{Tuple}({julia_signature_of(m.value.sig) for m in ms}...)
     for tup in tups
         create_dispatch(mt, ms, tup)
     end
@@ -97,9 +94,9 @@ end
 function create_dispatch(mt::MethodTable, ms::Set{MethodNode}, tup::Tuple)
     # create new method nodes
     intent = julia_intension(tup)
-    #methods = {m.m & intent for m in ms}
+    #methods = {m.value & intent for m in ms}
     methods = {filter(m->(!(m.sig.intent === naught)), 
-                      {m.m & intent for m in ms})...}
+                      {m.value & intent for m in ms})...}
 
     # create new method DAG
     top = MethodNode(Method(Pattern(intent), nothing))
@@ -133,52 +130,16 @@ function create_dispatch(mt::MethodTable, ms::Set{MethodNode}, tup::Tuple)
 end
 
 
-
-# ---- update method DAG ------------------------------------------------------
-
-insert!(at::MethodNode, m::MethodNode) = insert!(Set{MethodNode}(), at, m)
-function insert!(seen::Set{MethodNode}, at::MethodNode, m::MethodNode)
-    if has(seen, at); return; end
-    add(seen, at)
-    if m >= at
-        if at >= m 
-            at.m = m.m  # at == m
-            return true
-        end
-        # m > at
-        add(m.gt, at)
-        at_above_m = false
-    else
-        at_above_m = any([insert!(seen, below, m) for below in at.gt])
-    end
-    if !at_above_m
-        if at >= m
-            del_each(at.gt, at.gt & m.gt)
-            add(at.gt, m)
-            at_above_m = true
-        end
-    end
-    at_above_m
-end
-
-
 # ---- create decision tree ---------------------------------------------------
 
 firstitem(iter) = next(iter, start(iter))[1]
 
-subtreeof(m::MethodNode) = (sub = Set{MethodNode}(); addsubtree!(sub, m); sub)
-function addsubtree!(seen::Set{MethodNode}, m::MethodNode)
-    if has(seen, m); return; end
-    add(seen, m)
-    for below in m.gt; addsubtree!(seen, below); end       
-end
-
 function build_dtree(top::MethodNode, ms::Set{MethodNode})
     if isempty(top.gt) || length(ms) == 1
-        top.m.body === nothing ? nomethodnode : MethodCall(top.m)
+        top.value.body === nothing ? nomethodnode : MethodCall(top.value)
     else        
         pivot = firstitem(top.gt & ms)
-        below = subtreeof(pivot)
+        below = subDAGof(pivot)
         pass = build_dtree(pivot, ms & below)
         fail = build_dtree(top,   ms - below)
         Decision(intentof(pivot), pass, fail)
