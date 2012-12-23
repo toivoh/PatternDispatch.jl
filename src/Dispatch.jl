@@ -5,40 +5,18 @@ import PartialOrder
 using PartialOrder, Patterns, Encode, Toivo
 export MethodTable, Method, dispatch
 
-abstract DNode
-
-type Decision <: DNode
-    intent::Intension
-    pass
-    fail
-    seq::Vector
-
-    Decision(intent::Intension, pass, fail) = new(intent, pass, fail)
-end
-
 type Method
     sig::Pattern
     body
 end
->=(x::Method, y::Method) = x.sig.intent >= y.sig.intent
-
 
 const nomethod = Method(Pattern(anything), nothing)
+
+>=(x::Method, y::Method) = x.sig.intent >= y.sig.intent
 (&)(m::Method,  i::Intension) = Method(m.sig & Pattern(i), m.body)
-
-type MethodCall <: DNode
-    m::Method
-    bind_seq::Vector
-    bindings::Dict{Symbol,Node}
-
-    MethodCall(m::Method) = new(m)
-end
 
 typealias MethodNode PartialOrder.Node{Method}
 intentof(m::MethodNode) = m.value.sig.intent
-
-type NoMethodNode <: DNode; end
-const nomethodnode = NoMethodNode()
 
 type MethodTable
     name::Symbol
@@ -79,6 +57,7 @@ function create_dispatch(mt::MethodTable)
         end))
 end
 
+# ---- Experimental cooperative dispatch ----
 
 function create_dispatch2(mt::MethodTable)
     ms = subDAGof(mt.top)
@@ -129,6 +108,30 @@ function create_dispatch(mt::MethodTable, ms::Set{MethodNode}, tup::Tuple)
     
 end
 
+
+# ---- Decision Tree ----------------------------------------------------------
+
+abstract DNode
+
+type Decision <: DNode
+    intent::Intension
+    pass
+    fail
+    seq::Vector
+
+    Decision(intent::Intension, pass, fail) = new(intent, pass, fail)
+end
+
+type MethodCall <: DNode
+    m::Method
+    bind_seq::Vector
+    bindings::Dict{Symbol,Node}
+
+    MethodCall(m::Method) = new(m)
+end
+
+type NoMethodNode <: DNode; end
+const nomethodnode = NoMethodNode()
 
 # ---- create decision tree ---------------------------------------------------
 
