@@ -3,7 +3,7 @@ module Dispatch
 import Base.add
 import Nodes
 using PartialOrder, Patterns, DecisionTree, Toivo
-export MethodTable, Method, dispatch
+export MethodTable, Method
 
 type MethodTable
     name::Symbol
@@ -18,8 +18,6 @@ type MethodTable
         new(name, MethodNode(nomethod), f)
     end
 end
-
-dispatch(mt::MethodTable, args) = mt.f(args...)
 
 function add(mt::MethodTable, m::Method)
     insert!(mt.top, MethodNode(m))

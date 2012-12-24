@@ -39,7 +39,8 @@ function code_pattern(ex)
 
         if !wasbound
             mt = MethodTable($(quot(fname)))
-            const $f = (args...)->dispatch(mt, args)
+            const f = mt.f
+            const $f = (args...)->f(args...)
             method_tables[$f] = mt
         else
             if !has(method_tables, $f)
