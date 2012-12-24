@@ -1,10 +1,10 @@
 
 module Nodes
 import Base.&, Base.isequal, Base.>=, Base.>, Base.<=, Base.<, Base.show
-import Patterns.depsof, Patterns.subs
+import Patterns.depsof, Patterns.subs, Patterns.intension
 using Immutable, Patterns, Toivo
 export argsym, argnode, never, always, tupref, egalpred, typepred
-export julia_signature_of, julia_intension
+export julia_signature_of
 
 
 # ---- nodes ------------------------------------------------------------------
@@ -53,7 +53,7 @@ depsof(node::Union(TupleRef, Egal, Isa)) = [node.arg]
 depsof(i::Intension,node::TupleRef) = Node[node.arg,Guard(i.factors[node.arg])]
 
 
-function julia_intension(Ts::Tuple)
+function intension(Ts::Tuple)
     intension(typepred(argnode, NTuple{length(Ts),Any}),
               {typepred(tupref(argnode, k),T) for (k,T) in enumerate(Ts)}...)
 end
@@ -64,13 +64,12 @@ function get_type(intent::Intension, node::Node)
     has(intent.factors, node) ? get_type(intent.factors[node]) : Any
 end
 function julia_signature_of(intent::Intension)
+    if !has(intent.factors, argnode);  return Tuple;  end
     garg::Isa = intent.factors[argnode]
     @assert garg.typ <: Tuple
     nargs = length(garg.typ)
     tuple({get_type(intent, tupref(argnode, k)) for k=1:nargs}...)
 end
-
-
 julia_signature_of(p::Pattern) = julia_signature_of(p.intent)
 
 

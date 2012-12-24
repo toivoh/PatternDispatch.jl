@@ -3,7 +3,7 @@ module Dispatch
 import Base.add
 import Nodes
 using PartialOrder, Patterns, DecisionTree, Toivo
-export MethodTable, Method
+export MethodTable, Method, methodsof
 
 type MethodTable
     name::Symbol
@@ -33,6 +33,12 @@ function create_dispatch(mt::MethodTable)
             const f = $(mt.f)
             f($(Nodes.argsym)...) = $code
         end))
+end
+
+function methodsof(mt::MethodTable)
+    ms = subDAGof(mt.top)
+#    if mt.top.value === nomethod;  del(ms, mt.top);  end # exclude nomethod
+    [m.value for m in ms]
 end
 
 # ---- Experimental cooperative dispatch ----

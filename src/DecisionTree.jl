@@ -1,9 +1,10 @@
 
 module DecisionTree
 import PartialOrder
+import Nodes.julia_signature_of
 using PartialOrder, Patterns, Encode, Toivo
 
-export code_dispatch
+export code_dispatch, intentof
 
 
 # ---- Method Interface -------------------------------------------------------
@@ -13,6 +14,9 @@ export Method, nomethod, MethodNode
 type Method
     sig::Pattern
     body
+    hullT::Tuple
+
+    Method(sig::Pattern, body) = new(sig, body, julia_signature_of(sig))
 end
 
 const nomethod = Method(Pattern(anything), nothing)
