@@ -1,14 +1,32 @@
 
 module PartialOrder
-export insert!, subDAGof
+export insert!, subDAGof, prune
 
 type Node{T}
     value::T
     gt::Set{Node{T}}
     
     Node(value) = new(value, Set{Node{T}}())
+    Node(value, gt) = new(value, gt)
 end
 Node{T}(value::T) = Node{T}(value)
+
+function prune{T}(top::Node{T}, keep::Set{Node{T}})
+    below = [node => (subDAGof(node)-Set(node)) for node in subDAGof(top)]
+    nodes = {}
+    for (oldnode, gt) in below
+        for child in gt;  gt -= below[child]  end
+    end
+
+    substitution = [node => Node{T}(node.value, below[node]) for node in keep]
+    nodes = Node{T}[]
+    for node in values(substitution)
+        node.gt = Set{Node{T}}([substitution[child] for child in node.gt & keep]...)
+        push(nodes, node)
+    end
+    
+    Set(nodes...)
+end
 
 subDAGof{T}(node::Node{T}) = (sub = Set{Node{T}}(); addsubDAG!(sub, node); sub)
 function addsubDAG!{T}(seen::Set{Node{T}}, node::Node{T})
