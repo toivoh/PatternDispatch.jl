@@ -1,0 +1,15 @@
+
+ * Represent the body of a method with a function
+ * Reinstatiate ambiguity warnings
+ * Introduce heuristic for pivot selection decision tree
+ * Add Array pattern
+ * Add switch syntax
+ Possible syntax:
+
+    @match expression begin
+        (x::Int)->print(x)
+        1->print("one")
+        x->print("Not an Int")
+    end
+
+This should probably create a decision tree directly, without using cooperative dispatch?
