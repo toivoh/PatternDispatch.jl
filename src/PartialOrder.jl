@@ -1,6 +1,6 @@
 
 module PartialOrder
-export insert!, subDAGof, copyDAG, raw_filter!, simplify!
+export insert!, subDAGof, ordered_subDAGof, copyDAG, raw_filter!, simplify!
 
 type Node{T}
     value::T
@@ -47,6 +47,18 @@ function addsubDAG!{T}(seen::Set{Node{T}}, node::Node{T})
     add(seen, node)
     for below in node.gt; addsubDAG!(seen, below); end       
 end
+
+function ordered_subDAGof{T}(node::Node{T}) 
+    seen, order = Set{Node{T}}(), Node{T}[]
+    addsubDAG!(seen, order, node)
+    order
+end
+function addsubDAG!{T}(seen::Set{Node{T}},order::Vector{Node{T}},node::Node{T})
+    if has(seen, node); return; end
+    add(seen, node); push(order, node)
+    for below in node.gt; addsubDAG!(seen, order, below); end       
+end
+
 
 insert!{T}(at::Node{T}, node::Node{T}) = insert!(Set{Node{T}}(), at, node)
 function insert!{T}(seen::Set{Node{T}}, at::Node{T}, node::Node{T})

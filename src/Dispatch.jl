@@ -88,7 +88,7 @@ function add(mt::MethodTable, m::Method)
 end
 
 function methodsof(mt::MethodTable)
-    ms = subDAGof(mt.top)
+    ms = ordered_subDAGof(mt.top)
     [m.value for m in ms]
 end
 
@@ -99,6 +99,9 @@ function create_dispatch(mt::MethodTable)
             f(args...) = error("No matching pattern method found")
         end))
 
+    # NB: Lists methods in topological order;
+    # avoids ambiguity warnings from julia as long
+    # as there is no# ambiguity among the patterns.
     methods = methodsof(mt)
     actual_methods = filter(m->(m != nomethod), methods)
     hullTs = Set{Tuple}(Tuple[m.hullT for m in actual_methods]...)
