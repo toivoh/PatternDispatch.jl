@@ -51,7 +51,7 @@ function code_pattern(ex)
 
         p = $p_ex
         bindings = Node[p.bindings[name] for name in $(quot(bodyargs))]
-        method = Method(p, bindings, ($(bodyargs...),)->$body)
+        method = Method(p, bindings, $(esc(:(($(bodyargs...),)->$body))))
         add(mt, method)
     end
 end
