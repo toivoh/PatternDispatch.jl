@@ -7,7 +7,7 @@ export Node, Predicate, Guard, Result, Never, Always, never, always
 export depsof
 export Intension, intension, naught, anything
 export encode, guardsof, depsof, resultof, subs
-export Pattern
+export Pattern, suffix_bindings
 
 
 # ---- Node -------------------------------------------------------------------
@@ -83,8 +83,13 @@ Pattern(intent::Intension) = Pattern(intent, Dict{Symbol,Node}())
 
 function (&)(p::Pattern, q::Pattern)
     bindings = merge(p.bindings, q.bindings)
-#    @assert length(bindings) == length(p.bindings)+length(q.bindings)
+    @assert length(bindings) == length(p.bindings)+length(q.bindings)
     Pattern(p.intent & q.intent, bindings)
+end
+
+function suffix_bindings(p::Pattern, suffix::String)
+    Pattern(p.intent, (Symbol=>Node)[symbol(string(name, suffix)) => node
+                                     for (name,node) in p.bindings])
 end
 
 end # module

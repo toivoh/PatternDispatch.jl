@@ -37,9 +37,12 @@ function add(mt::MethodTable, m::Method)
         if lb === naught; continue; end
         if any([ml.sig.intent == lb for ml in methods]) continue; end
         
-        println("Warning: New @pattern method ", mt.name, m.sig)
-        println(" is ambiguous with ", mt.name, mk.sig)
-        println(" Make sure ", mt.name, m.sig&mk.sig, " is defined first")
+        sig1 = suffix_bindings(m.sig,  "_A")
+        sig2 = suffix_bindings(mk.sig, "_B")
+
+        println("Warning: New @pattern method ", mt.name, sig1)
+        println(" is ambiguous with ", mt.name, sig2)
+        println(" Make sure ", mt.name, sig1&sig2, " is defined first")
     end
 
     # todo: only when necessary
