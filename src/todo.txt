@@ -1,5 +1,4 @@
 
- * Represent the body of a method with a function
  * Reinstatiate ambiguity warnings
  * Introduce heuristic for pivot selection decision tree
  * Add Array pattern

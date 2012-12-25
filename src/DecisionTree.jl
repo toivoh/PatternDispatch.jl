@@ -15,7 +15,7 @@ export Method, nomethod, MethodNode
 type Method
     sig::Pattern
     bindings::Vector{Node}
-    body
+    body::Union(Function,Nothing)
     hullT::Tuple
 
     Method(sig::Pattern, bs, body) = new(sig, bs, body,julia_signature_of(sig))
@@ -48,7 +48,7 @@ end
 type MethodCall <: DNode
     m::Method
     bind_seq::Vector
-    bindings::Dict{Symbol,Node}
+    bindings::Vector{Node}
 
     MethodCall(m::Method) = new(m)
 end
@@ -88,8 +88,7 @@ function seq_dispatch!(results::ResultsDict, m::MethodCall)
     s = Sequence(m.m.sig.intent, results) # shouldn't need an Intension...
     for node in values(m.m.sig.bindings);  sequence!(s, node)  end
     m.bind_seq = s.seq
-    m.bindings = (Symbol=>Node)[name => results[node] 
-                                for (name,node) in m.m.sig.bindings]
+    m.bindings = Node[results[node] for node in m.m.bindings]
 end
 function seq_dispatch!(results::ResultsDict, d::Decision)
     results_fail = copy(results)
@@ -109,11 +108,10 @@ function code_dispatch(::NoMethodNode)
 end
 function code_dispatch(m::MethodCall)
     prebind = encoded(m.bind_seq)
-    binds = { :( $name = $(resultof(node))) for (name,node) in m.bindings }
+    args = {resultof(node) for node in m.bindings}
     quote
         $(prebind...)
-        $(binds...)
-        $(m.m.body)
+        $(quot(m.m.body))($(args...))
     end
 end
 function code_dispatch(d::Decision)
