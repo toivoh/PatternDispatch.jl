@@ -2,3 +2,8 @@
  * Introduce heuristic for pivot selection decision tree
  * Add Array pattern
  * Tidy up in Dispatch.jl, move some into DecisionTree?
+ * Make sure create_dispatch creates methods in topological order
+ * Improve show_dispatch output
+   - Better symbol names
+   - Print body functions
+   - Print better names for body functions

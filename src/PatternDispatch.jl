@@ -19,9 +19,9 @@ import Dispatch.show_dispatch
 
 const method_tables = Dict{Function, MethodTable}()
 
-function show_dispatch(f::Function)
+function show_dispatch(f::Function, args...)
     if !has(method_tables, f);  error("not a pattern function: $f")  end
-    show_dispatch(method_tables[f])
+    show_dispatch(method_tables[f], args...)
 end
 
 macro pattern(ex)

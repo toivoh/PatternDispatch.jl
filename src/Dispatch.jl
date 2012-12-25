@@ -29,12 +29,16 @@ type MethodTable
     end
 end
 
-show_dispatch(x) = show_dispatch(OUTPUT_STREAM, x)
-function show_dispatch(io::IO, mt::MethodTable)
+show_dispatch(mt::MethodTable, args...) = show_dispatch(OUTPUT_STREAM, mt, args...)
+show_dispatch(io::IO, args...) = error("No method")
+show_dispatch(io::IO, mt::MethodTable) = show_dispatch(io, mt, Tuple)
+function show_dispatch(io::IO, mt::MethodTable, Ts::Tuple) 
     if !mt.compiled;  create_dispatch(mt);  end
-    for fdef in values(mt.julia_methods)
-        Base.show_unquoted(io, fdef)
-        println(io)
+    for (f_Ts, fdef) in mt.julia_methods
+        if f_Ts <: Ts
+            Base.show_unquoted(io, fdef)
+            println(io)
+        end
     end
 end
 
