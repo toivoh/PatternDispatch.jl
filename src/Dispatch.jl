@@ -30,6 +30,18 @@ end
 
 function add(mt::MethodTable, m::Method)
     insert!(mt.top, MethodNode(m))
+    
+    methods = methodsof(mt)
+    for mk in methods
+        lb = m.sig.intent & mk.sig.intent
+        if lb === naught; continue; end
+        if any([ml.sig.intent == lb for ml in methods]) continue; end
+        
+        println("Warning: New @pattern method ", mt.name, m.sig)
+        println(" is ambiguous with ", mt.name, mk.sig)
+        println(" Make sure ", mt.name, m.sig&mk.sig, " is defined first")
+    end
+
     # todo: only when necessary
     if mt.compiled;  create_dispatch(mt)  end
 end
