@@ -103,16 +103,17 @@ end
 
 # ---- code_dispatch: decision tree -> dispatch code --------------------------
 
+wrap(ex)       = ex
+wrap(exprs...) = expr(:block, exprs...)
+
 function code_dispatch(::NoMethodNode)
     :( error("No matching pattern method found") )
 end
 function code_dispatch(m::MethodCall)
     prebind = encoded(m.bind_seq)
     args = {resultof(node) for node in m.bindings}
-    quote
-        $(prebind...)
-        $(quot(m.m.body))($(args...))
-    end
+    wrap(prebind...,
+         expr(:call, m.m.body, args...))
 end
 function code_dispatch(d::Decision)
     pred = code_predicate(d.seq)
