@@ -1,5 +1,5 @@
 
- * Introduce heuristic for pivot selection decision tree
+ * Introduce heuristic for pivot selection in decision tree
  * Add Array pattern
  * Tidy up in Dispatch.jl, move some into DecisionTree?
  * Make sure create_dispatch creates methods in topological order
@@ -7,3 +7,4 @@
    - Better symbol names
    - Print body functions
    - Print better names for body functions
+ * Remove dependency on Toivo -- introduce Meta module instead?

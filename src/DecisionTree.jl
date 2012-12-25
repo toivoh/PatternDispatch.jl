@@ -16,12 +16,15 @@ type Method
     sig::Pattern
     bindings::Vector{Node}
     body::Union(Function,Nothing)
+    body_ex
     hullT::Tuple
 
-    Method(sig::Pattern, bs, body) = new(sig, bs, body,julia_signature_of(sig))
+    function Method(sig::Pattern, bs, body, body_ex)
+        new(sig, bs, body, body_ex, julia_signature_of(sig))
+    end
 end
 
-const nomethod = Method(Pattern(anything), Node[], nothing)
+const nomethod = Method(Pattern(anything), Node[], nothing, nothing)
 
 >=(x::Method, y::Method) = x.sig.intent >= y.sig.intent
 #==(x::Method, y::Method) = x.sig.intent == y.sig.intent
