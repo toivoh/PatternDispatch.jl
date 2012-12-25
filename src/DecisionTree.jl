@@ -113,7 +113,7 @@ function code_dispatch(m::MethodCall)
     prebind = encoded(m.bind_seq)
     args = {resultof(node) for node in m.bindings}
     wrap(prebind...,
-         expr(:call, m.m.body, args...))
+         expr(:call, quot(m.m.body), args...))
 end
 function code_dispatch(d::Decision)
     pred = code_predicate(d.seq)

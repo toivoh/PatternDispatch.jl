@@ -3,20 +3,21 @@ module Dispatch
 import Base.add
 import Nodes
 using PartialOrder, Patterns, DecisionTree, Encode, Toivo
-export MethodTable, Method, methodsof
+export MethodTable, Method, methodsof, show_dispatch
 
 type MethodTable
     name::Symbol
     top::MethodNode
     f::Function
     compiled::Bool
+    julia_methods::Dict{Tuple,Any}
 
     function MethodTable(name::Symbol) 
         f = eval(:(let
                 $name(args...) = error("No matching pattern method found")
                 $name
             end))
-        mt = new(name, MethodNode(nomethod), f, false)
+        mt = new(name, MethodNode(nomethod), f, false, (Tuple=>Any)[])
         eval(:(let
                 const f = $f
                 function f(args...)
@@ -25,6 +26,15 @@ type MethodTable
                 end
             end))
         mt
+    end
+end
+
+show_dispatch(x) = show_dispatch(OUTPUT_STREAM, x)
+function show_dispatch(io::IO, mt::MethodTable)
+    if !mt.compiled;  create_dispatch(mt);  end
+    for fdef in values(mt.julia_methods)
+        Base.show_unquoted(io, fdef)
+        println(io)
     end
 end
 
@@ -97,15 +107,13 @@ function create_dispatch(mt::MethodTable, methods::Vector{Method},hullT::Tuple)
 
     code = code_dispatch(top, results)
     args = {:($argsym::$(quot(T))) for (argsym,T) in zip(argsyms,hullT)}    
-    fdef = quote
-        function f($(args...))
+    fdef = :(function f($(args...))
             $code
-        end
-    end
-#   @show fdef
+        end)
+    mt.julia_methods[hullT] = fdef
 
     eval(:(let
-            const f = $(mt.f)
+            const f = $(quot(mt.f))
             f($(args...)) = $code
         end))
 end

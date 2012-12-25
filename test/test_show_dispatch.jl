@@ -11,6 +11,6 @@ using PatternDispatch
 @pattern f(1,y::Int) = 2
 @pattern f(1,2) = 3
 
-f(2,2)
+show_dispatch(f)
 
 end

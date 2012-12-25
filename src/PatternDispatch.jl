@@ -3,7 +3,7 @@ load("Debug.jl")
 
 module PatternDispatch
 using Toivo, Debug
-export @pattern
+export @pattern, show_dispatch
 
 include(find_in_path("PatternDispatch/src/PartialOrder.jl"))
 include(find_in_path("PatternDispatch/src/Immutable.jl"))
@@ -14,9 +14,15 @@ include(find_in_path("PatternDispatch/src/Encode.jl"))
 include(find_in_path("PatternDispatch/src/DecisionTree.jl"))
 include(find_in_path("PatternDispatch/src/Dispatch.jl"))
 using Patterns, Nodes, Recode, Dispatch
+import Dispatch.show_dispatch
 
 
 const method_tables = Dict{Function, MethodTable}()
+
+function show_dispatch(f::Function)
+    if !has(method_tables, f);  error("not a pattern function: $f")  end
+    show_dispatch(method_tables[f])
+end
 
 macro pattern(ex)
     code_pattern(ex)
