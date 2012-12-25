@@ -34,10 +34,26 @@ show_dispatch(io::IO, args...) = error("No method")
 show_dispatch(io::IO, mt::MethodTable) = show_dispatch(io, mt, Tuple)
 function show_dispatch(io::IO, mt::MethodTable, Ts::Tuple) 
     if !mt.compiled;  create_dispatch(mt);  end
+
+    println("\n# ---- Pattern methods: ----")
+    methods = methodsof(mt)
+    methods = Method[filter(m->(m!=nomethod), methods)...]
+
+    for (k,method) in enumerate(methods)
+        if !(method.hullT <: Ts); continue end
+        println(io, "# ", mt.name, method.sig)
+        args = keys(method.sig.bindings) # Right order? Does it matter?
+        mname = symbol(string("match", k))
+        Base.show_unquoted(io, expr(:function, :($mname($(args...))), 
+                                    method.body_ex))
+        print(io,"\n\n")
+    end
+
+    println("\n# ---- Generated methods: ----")
     for (f_Ts, fdef) in mt.julia_methods
         if f_Ts <: Ts
             Base.show_unquoted(io, fdef)
-            println(io)
+            print(io, "\n\n")
         end
     end
 end
@@ -111,10 +127,8 @@ function create_dispatch(mt::MethodTable, methods::Vector{Method},hullT::Tuple)
 
     code = code_dispatch(top, results)
     args = {:($argsym::$(quot(T))) for (argsym,T) in zip(argsyms,hullT)}    
-    fdef = :(function f($(args...))
-            $code
-        end)
-    mt.julia_methods[hullT] = fdef
+    fdef = expr(:function, :( $(mt.name)($(args...)) ), code)
+    mt.julia_methods[hullT] = expr(:function, :( $(mt.name)($(args...)) ),code)
 
     eval(:(let
             const f = $(quot(mt.f))
