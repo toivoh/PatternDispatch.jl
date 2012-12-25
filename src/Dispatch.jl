@@ -2,7 +2,7 @@
 module Dispatch
 import Base.add
 import Nodes
-using Meta, PartialOrder, Patterns, DecisionTree, Encode, Toivo
+using Meta, PartialOrder, Patterns, DecisionTree, Encode
 export MethodTable, Method, methodsof, show_dispatch
 
 type MethodTable

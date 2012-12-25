@@ -1,7 +1,7 @@
 
 # Recode: function signature -> Pattern creating AST
 module Recode
-using Patterns, Nodes, Toivo
+using Meta, Patterns, Nodes
 export recode, @qpat, @ipat
 
 macro qpat(ex)

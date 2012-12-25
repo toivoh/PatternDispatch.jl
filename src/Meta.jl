@@ -1,7 +1,24 @@
 
 module Meta
-using Toivo
-export subs_ex
+export quot, is_expr, split_fdef, subs_ex, @expect, @get!
+
+
+macro expect(pred)
+    quote
+        $(esc(pred)) ? nothing : error(
+          $(string("expected: ", sprint(Base.show_unquoted, pred)", == true")))
+    end
+end
+
+# ---- Metaprogramming --------------------------------------------------------
+
+quot(ex) = expr(:quote, ex)
+
+is_expr(ex::Expr, head)          = ex.head === head
+is_expr(ex::Expr, heads::Set)    = has(heads, ex.head)
+is_expr(ex::Expr, heads::Vector) = contains(heads, ex.head)
+is_expr(ex,       head)          = false
+is_expr(ex,       head, n::Int)  = is_expr(ex, head) && length(ex.args) == n
 
 function subs_ex(subs::Function, ex)
     s = subs(ex)
@@ -13,4 +30,26 @@ function subsubs_ex(subs::Function, ex::Expr)
     ex.head === :quote ? ex : expr(ex.head, {subs_ex(subs,a) for a in ex.args})
 end
 
+# Return the signature and body from a named method definition, either syntax.
+# E.g. split_fdef( :( f(x) = x^2) ) == (:(f(x)), :(x^2))
+function split_fdef(fdef::Expr)
+    @expect (fdef.head == :function) || (fdef.head == :(=))
+    @expect length(fdef.args) == 2
+    signature, body = fdef.args
+    @expect is_expr(signature, :call)
+    @expect length(signature.args) >= 1
+    (signature, body)
 end
+split_fdef(f::Any) = error("split_fdef: expected function definition, got\n$f")
+
+
+# ---- Other stuff (todo: move?) ---------------------------------------------
+
+macro get!(d, k, default)
+    quote
+        d, k = $(esc(d)), $(esc(k))
+        has(d, k) ? d[k] : (d[k] = $(esc(default)))
+    end
+end
+
+end # module

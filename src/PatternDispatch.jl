@@ -1,8 +1,4 @@
-load("Toivo.jl")
-load("Debug.jl")
-
 module PatternDispatch
-using Toivo, Debug
 export @pattern, show_dispatch
 
 include(find_in_path("PatternDispatch/src/Meta.jl"))
@@ -14,7 +10,7 @@ include(find_in_path("PatternDispatch/src/Recode.jl"))
 include(find_in_path("PatternDispatch/src/Encode.jl"))
 include(find_in_path("PatternDispatch/src/DecisionTree.jl"))
 include(find_in_path("PatternDispatch/src/Dispatch.jl"))
-using Patterns, Nodes, Recode, Dispatch
+using Meta, Patterns, Nodes, Recode, Dispatch
 import Dispatch.show_dispatch
 
 

@@ -1,6 +1,6 @@
 
 module Immutable
-using Toivo
+using Meta
 export @immutable, @get!  # shouldn't need to export @get!
 
 macro immutable(ex)

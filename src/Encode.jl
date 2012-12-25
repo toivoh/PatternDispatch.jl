@@ -1,6 +1,6 @@
 
 module Encode
-using Patterns, Toivo
+using Meta, Patterns
 import Nodes.encode
 export ResultsDict, Sequence, sequence!, code_predicate, encoded
 export preguard!, provide!

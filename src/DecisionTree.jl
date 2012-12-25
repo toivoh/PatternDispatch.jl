@@ -3,7 +3,7 @@ module DecisionTree
 import Base.==
 import PartialOrder
 import Nodes.julia_signature_of
-using PartialOrder, Patterns, Encode, Toivo
+using Meta, PartialOrder, Patterns, Encode
 
 export code_dispatch, intentof
 

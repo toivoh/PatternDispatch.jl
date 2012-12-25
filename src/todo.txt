@@ -4,4 +4,4 @@
  * Tidy up in Dispatch.jl, move some into DecisionTree?
  * Improve show_dispatch output
    - Better symbol names
- * Remove dependency on Toivo -- introduce Meta module instead?
+
