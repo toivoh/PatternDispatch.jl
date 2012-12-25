@@ -5,5 +5,4 @@
  * Make sure create_dispatch creates methods in topological order
  * Improve show_dispatch output
    - Better symbol names
-   - Print better names for body functions
  * Remove dependency on Toivo -- introduce Meta module instead?

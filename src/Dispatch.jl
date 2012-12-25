@@ -2,7 +2,7 @@
 module Dispatch
 import Base.add
 import Nodes
-using PartialOrder, Patterns, DecisionTree, Encode, Toivo
+using Meta, PartialOrder, Patterns, DecisionTree, Encode, Toivo
 export MethodTable, Method, methodsof, show_dispatch
 
 type MethodTable
@@ -39,20 +39,28 @@ function show_dispatch(io::IO, mt::MethodTable, Ts::Tuple)
     methods = methodsof(mt)
     methods = Method[filter(m->(m!=nomethod), methods)...]
 
+    mnames = (Function=>Symbol)[]
     for (k,method) in enumerate(methods)
-        if !(method.hullT <: Ts); continue end
+        #if !(method.hullT <: Ts); continue end
         println(io, "# ", mt.name, method.sig)
         args = keys(method.sig.bindings) # Right order? Does it matter?
         mname = symbol(string("match", k))
+        mnames[method.body] = mname
         Base.show_unquoted(io, expr(:function, :($mname($(args...))), 
                                     method.body_ex))
         print(io,"\n\n")
     end
 
+    subs_invocation(ex) = begin
+        if is_expr(ex, :quote) && has(mnames, ex.args[1]); mnames[ex.args[1]]
+        else; nothing
+        end
+    end
+
     println("\n# ---- Generated methods: ----")
     for (f_Ts, fdef) in mt.julia_methods
         if f_Ts <: Ts
-            Base.show_unquoted(io, fdef)
+            Base.show_unquoted(io, subs_ex(subs_invocation, fdef))
             print(io, "\n\n")
         end
     end

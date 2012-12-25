@@ -5,6 +5,7 @@ module PatternDispatch
 using Toivo, Debug
 export @pattern, show_dispatch
 
+include(find_in_path("PatternDispatch/src/Meta.jl"))
 include(find_in_path("PatternDispatch/src/PartialOrder.jl"))
 include(find_in_path("PatternDispatch/src/Immutable.jl"))
 include(find_in_path("PatternDispatch/src/Patterns.jl"))
