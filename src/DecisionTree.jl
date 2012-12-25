@@ -14,17 +14,19 @@ export Method, nomethod, MethodNode
 
 type Method
     sig::Pattern
+    bindings::Vector{Node}
     body
     hullT::Tuple
 
-    Method(sig::Pattern, body) = new(sig, body, julia_signature_of(sig))
+    Method(sig::Pattern, bs, body) = new(sig, bs, body,julia_signature_of(sig))
 end
 
-const nomethod = Method(Pattern(anything), nothing)
+const nomethod = Method(Pattern(anything), Node[], nothing)
 
 >=(x::Method, y::Method) = x.sig.intent >= y.sig.intent
-==(x::Method, y::Method) = x.sig.intent == y.sig.intent
-(&)(m::Method,  i::Intension) = Method(m.sig & Pattern(i), m.body)
+#==(x::Method, y::Method) = x.sig.intent == y.sig.intent
+#(&)(m::Method,  i::Intension) = Method(m.sig & Pattern(i), m.bindings, m.body)
+(&)(m::Method,  i::Intension) = m.sig.intent & i
 
 typealias MethodNode PartialOrder.Node{Method}
 intentof(m::MethodNode) = m.value.sig.intent
