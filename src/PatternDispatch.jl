@@ -26,7 +26,7 @@ function code_pattern(ex)
     @expect is_expr(sig, :call)
     fname, args = sig.args[1], sig.args[2:end]
     psig = :($(args...),)
-    p_ex = recode(psig)
+    p_ex, bodyargs = recode(psig)
     
     f = esc(fname)
     quote       

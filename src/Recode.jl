@@ -5,7 +5,7 @@ using Patterns, Nodes, Toivo
 export recode, @qpat, @ipat
 
 macro qpat(ex)
-    recode(ex)
+    recode(ex)[1]
 end
 macro ipat(ex)
     c = Context()
@@ -27,11 +27,12 @@ const typed_dict = symbol("typed-dict")
 function recode(ex)
     c = Context()
     recode(c, quot(argnode), ex)
-    quote
+    p_ex = quote
         $(c.code...)
         Pattern(intension($(c.guards...)), 
                 $(expr(typed_dict, :(Symbol=>Node), c.bindings...)))
     end
+    p_ex, Symbol[b.args[1].args[1] for b in c.bindings]
 end
 
 recode(c::Context, arg, ex) = push(c.guards, :(egalpred($arg,$(quot(ex)))))
