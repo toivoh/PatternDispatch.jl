@@ -1,5 +1,6 @@
 
 module DecisionTree
+import Base.==
 import PartialOrder
 import Nodes.julia_signature_of
 using PartialOrder, Patterns, Encode, Toivo
@@ -22,6 +23,7 @@ end
 const nomethod = Method(Pattern(anything), nothing)
 
 >=(x::Method, y::Method) = x.sig.intent >= y.sig.intent
+==(x::Method, y::Method) = x.sig.intent == y.sig.intent
 (&)(m::Method,  i::Intension) = Method(m.sig & Pattern(i), m.body)
 
 typealias MethodNode PartialOrder.Node{Method}

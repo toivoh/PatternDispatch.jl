@@ -1,6 +1,6 @@
 
 module PartialOrder
-export insert!, subDAGof, prune
+export insert!, subDAGof, copyDAG, raw_filter!, simplify!
 
 type Node{T}
     value::T
@@ -11,21 +11,34 @@ type Node{T}
 end
 Node{T}(value::T) = Node{T}(value)
 
-function prune{T}(top::Node{T}, keep::Set{Node{T}})
-    below = [node => (subDAGof(node)-Set(node)) for node in subDAGof(top)]
-    nodes = {}
-    for (oldnode, gt) in below
-        for child in gt;  gt -= below[child]  end
+copyDAG{T}(top::Node{T}) = copyDAG((Node{T}=>Node{T})[], top)
+function copyDAG{T}(subs::Dict{Node{T},Node{T}}, node::Node{T})
+    if has(subs, node); return subs[node] end
+    
+    gt = Set{Node{T}}([copyDAG(subs, child) for child in node.gt]...)
+    subs[node] = Node{T}(node.value, gt)
+end
+
+raw_filter!{T}(n::Node{T}, keep::Set{T}) = raw_filter!(Set{Node{T}}(), n, keep)
+function raw_filter!{T}(seen::Set{Node{T}}, node::Node{T}, keep::Set{T})
+    if has(seen, node); return end
+    add(seen, node)
+    node.gt = Set{Node{T}}(filter(node->(has(keep, node.value)), node.gt)...)
+    for child in node.gt;  raw_filter!(child, keep)  end
+end
+
+simplify!{T}(n::Node{T}, domain) = simplify!((Node{T}=>Node{T})[], n, domain)
+function simplify!{T}(subs::Dict{Node{T},Node{T}}, node::Node{T}, domain)
+    if has(subs, node);  return subs[node]  end
+    ndom = node.value & domain
+    for child in node.gt
+        if ndom == child.value & domain
+            return subs[node] = simplify!(child, domain)
+        end
     end
 
-    substitution = [node => Node{T}(node.value, below[node]) for node in keep]
-    nodes = Node{T}[]
-    for node in values(substitution)
-        node.gt = Set{Node{T}}([substitution[child] for child in node.gt & keep]...)
-        push(nodes, node)
-    end
-    
-    Set(nodes...)
+    node.gt = Set{Node{T}}([simplify!(child, domain) for child in node.gt]...)
+    subs[node] = node
 end
 
 subDAGof{T}(node::Node{T}) = (sub = Set{Node{T}}(); addsubDAG!(sub, node); sub)

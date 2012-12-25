@@ -22,25 +22,21 @@ function dominated_wrt(node::MethodNode, cut::Intension)
 end
 
 for hullT in hullTs
-    hull = intension(hullT)
-    # filter out too specific methods
-    ns = [filter(node->!ltT(node.value.hullT, hullT), nodes)...]
-    # filter out non-questions
-    ns = [filter(node->!dominated_wrt(node, hull), ns)...]
+    top = copyDAG(mt.top)
 
-    kept = prune(mt.top, Set{MethodNode}(ns...))
-    for node in [kept...]
-        del_each(kept, node.gt)
-    end
-    @assert length(kept) == 1
-    top = [kept...][1]
+    # filter out too specific methods
+    keep = Set{Method}(filter(m->!ltT(m.hullT, hullT), methods)...)
+    @assert !isempty(keep)
+    raw_filter!(top, keep)
+
+    # filter out non-questions
+    hull = intension(hullT)
+    top = simplify!(top, hull)
 
     @show hullT
-    @show [node.value.sig for node in ns]
-
+    @show tuple([node.value.sig for node in subDAGof(top)]...)
     @show top.value.sig
     println()
-
 end
 
 
