@@ -57,6 +57,8 @@ function recode(c::Context, arg, ex::Expr)
         end
     elseif head === :call && args[1] == :~
         for p in args[2:end]; recode(c, arg, p); end
+    elseif head === :$ && nargs == 1
+        push(c.guards, :(egalpred($arg, $(esc(args[1])))))
     else
         error("recode: unimplemented: ex = $ex")
     end
