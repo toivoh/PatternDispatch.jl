@@ -146,7 +146,7 @@ function create_dispatch(mt::MethodTable, methods::Vector{Method},hullT::Tuple)
                 break
             end
         end
-        if name === nothing;  name = gensym("arg");  end
+        if name === nothing;  name = symbol("arg$k");  end
         
         push(argsyms, name)
         provide!(results, node, name)
