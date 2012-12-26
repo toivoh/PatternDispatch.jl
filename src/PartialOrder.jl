@@ -60,14 +60,13 @@ function addsubDAG!{T}(seen::Set{Node{T}},order::Vector{Node{T}},node::Node{T})
 end
 
 
-insert!{T}(at::Node{T}, node::Node{T}) = insert!(Set{Node{T}}(), at, node)
-function insert!{T}(seen::Set{Node{T}}, at::Node{T}, node::Node{T})
-    if has(seen, at); return; end
-    add(seen, at)
+insert!{T}(at::Node{T}, node::Node{T}) = insert!((Node{T}=>Bool)[], at, node)
+function insert!{T}(seen::Dict{Node{T},Bool}, at::Node{T}, node::Node{T})
+    if has(seen, at); return seen[at] end
     if node.value >= at.value
         if at.value >= node.value 
             at.value = node.value  # at == node
-            return true
+            return seen[at] = true
         end
         # node > at
         add(node.gt, at)
@@ -82,7 +81,7 @@ function insert!{T}(seen::Set{Node{T}}, at::Node{T}, node::Node{T})
             at_above_node = true
         end
     end
-    at_above_node
+    seen[at] = at_above_node
 end
 
 end # module
