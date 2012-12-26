@@ -41,7 +41,7 @@ function show_dispatch(io::IO, mt::MethodTable, Ts::Tuple)
     methods = Method[filter(m->(m!=nomethod), methods)...]
 
     mnames = (Function=>Symbol)[]
-    for method in methods
+    for (id, method) in sort([(m.id, m) for m in methods])
         #if !(method.hullT <: Ts); continue end
         println(io, "# ", mt.name, method.sig)
         args = keys(method.sig.bindings) # Right order? Does it matter?
