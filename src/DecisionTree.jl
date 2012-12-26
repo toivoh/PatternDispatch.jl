@@ -18,6 +18,7 @@ type Method
     body::Union(Function,Nothing)
     body_ex
     hullT::Tuple
+    id::Int
 
     function Method(sig::Pattern, bs, body, body_ex)
         new(sig, bs, body, body_ex, julia_signature_of(sig))

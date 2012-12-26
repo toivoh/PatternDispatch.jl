@@ -11,13 +11,14 @@ type MethodTable
     f::Function
     compiled::Bool
     julia_methods::Dict{Tuple,Any}
+    method_counter::Int
 
     function MethodTable(name::Symbol) 
         f = eval(:(let
                 $name(args...) = error("No matching pattern method found")
                 $name
             end))
-        mt = new(name, MethodNode(nomethod), f, false, (Tuple=>Any)[])
+        mt = new(name, MethodNode(nomethod), f, false, (Tuple=>Any)[], 0)
         eval(:(let
                 const f = $f
                 function f(args...)
@@ -40,11 +41,11 @@ function show_dispatch(io::IO, mt::MethodTable, Ts::Tuple)
     methods = Method[filter(m->(m!=nomethod), methods)...]
 
     mnames = (Function=>Symbol)[]
-    for (k,method) in enumerate(methods)
+    for method in methods
         #if !(method.hullT <: Ts); continue end
         println(io, "# ", mt.name, method.sig)
         args = keys(method.sig.bindings) # Right order? Does it matter?
-        mname = symbol(string("match", k))
+        mname = symbol(string("match", method.id))
         mnames[method.body] = mname
         Base.show_unquoted(io, expr(:function, :($mname($(args...))), 
                                     method.body_ex))
@@ -67,6 +68,7 @@ function show_dispatch(io::IO, mt::MethodTable, Ts::Tuple)
 end
 
 function add(mt::MethodTable, m::Method)
+    m.id = (mt.method_counter += 1)
     insert!(mt.top, MethodNode(m))
     
     methods = methodsof(mt)
