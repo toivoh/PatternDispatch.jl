@@ -45,7 +45,8 @@ type Decision <: DNode
     pass
     fail
     methods::Vector{Method}
-    seq::Vector
+    pre::Vector{Node}
+    seq::Vector{Node}
 
     Decision(intent::Intension, pass, fail, ms) = new(intent, pass, fail, ms)
 end
@@ -128,7 +129,10 @@ function seq_dispatch!(results::ResultsDict, d::Decision)
     results_fail = copy(results)
     s = Sequence(d.intent, results, make_namer(d.methods))
     for g in guardsof(d.intent);  sequence!(s, Guard(g))  end
-    d.seq = s.seq
+
+    k=findfirst(node->isa(node,Guard), s.seq)
+    d.pre = s.seq[1:(k-1)]
+    d.seq = s.seq[k:end]
 
     seq_dispatch!(results, d.pass)
     seq_dispatch!(results_fail, d.fail)
@@ -150,12 +154,12 @@ function code_dispatch(m::MethodCall)
          expr(:call, quot(m.m.body), args...))
 end
 function code_dispatch(d::Decision)
+    pre = encoded(d.pre)
     pred = code_predicate(d.seq)
     pass = code_dispatch(d.pass)
     fail = code_dispatch(d.fail)
     code = :( if $pred; $pass; else; $fail; end )
-    #length(pre) == 0 ? code : (quote; $(pre...); $code; end)
-    code
+    length(pre) == 0 ? code : (quote; $(pre...); $code; end)
 end
 
 end # module

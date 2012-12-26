@@ -6,3 +6,4 @@
  * Emit dispatch methods in reverse topological order
  * Include `f = (args...)->dispatch(args...)` in show_dispatch printout
  * Extract preparations from first predicate in code_predicate
+   - reflect in results
