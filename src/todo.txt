@@ -13,4 +13,4 @@
  * Pull computations upward in decision tree as far as they are needed
    by every branch
  * Eliminate sure branches
- * Remove line numbers from dispatch code
+
