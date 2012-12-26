@@ -78,6 +78,12 @@ isequal(x::Intension, y::Intension) = isequal(x.factors, y.factors)
 type Pattern
     intent::Intension
     bindings::Dict{Symbol,Node}
+    rev_bindings::Dict{Node,Symbol}
+
+    function Pattern(intent::Intension, bindings::Dict{Symbol,Node})
+        rev = (Node=>Symbol)[node => name for (name,node) in bindings]
+        new(intent, bindings, rev)
+    end
 end
 Pattern(intent::Intension) = Pattern(intent, Dict{Symbol,Node}())
 

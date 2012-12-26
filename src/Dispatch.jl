@@ -133,10 +133,27 @@ function create_dispatch(mt::MethodTable, methods::Vector{Method},hullT::Tuple)
     # todo: move some of this into DecisionTree
     results = ResultsDict()
     for pred in guardsof(hull);  preguard!(results, Guard(pred));  end
-    argsyms = {gensym("arg") for k=1:length(hullT)}
-    for (k, argsym) in enumerate(argsyms)
-        provide!(results, Nodes.tupref(Nodes.argnode, k), argsym)
+
+    argsyms = {}
+    for k=1:length(hullT)
+        node, name = Nodes.tupref(Nodes.argnode, k), nothing
+        for method in methods
+            rb = method.sig.rev_bindings
+            if has(rb, node)
+                name = symbol(string(rb[node], '_', method.id))
+                break
+            end
+        end
+        if name === nothing;  name = gensym("arg");  end
+        
+        push(argsyms, name)
+        provide!(results, node, name)
     end
+    
+#     argsyms = {gensym("arg") for k=1:length(hullT)}
+#     for (k, argsym) in enumerate(argsyms)
+#         provide!(results, Nodes.tupref(Nodes.argnode, k), argsym)
+#     end
 
     code = code_dispatch(top, results)
     args = {:($argsym::$(quot(T))) for (argsym,T) in zip(argsyms,hullT)}    
