@@ -44,9 +44,10 @@ type Decision <: DNode
     intent::Intension
     pass
     fail
+    methods::Vector{Method}
     seq::Vector
 
-    Decision(intent::Intension, pass, fail) = new(intent, pass, fail)
+    Decision(intent::Intension, pass, fail, ms) = new(intent, pass, fail, ms)
 end
 
 type MethodCall <: DNode
@@ -94,7 +95,10 @@ function build_dtree(top::MethodNode, ms::Set{MethodNode})
         below = subDAGof(pivot)
         pass = build_dtree(pivot, ms & below)
         fail = build_dtree(top,   ms - below)
-        Decision(intentof(pivot), pass, fail)
+
+        methods = [node.value for node in filter(node->has(ms, node), 
+                                                 ordered_subDAGof(top))]
+        Decision(intentof(pivot), pass, fail, methods)
     end    
 end
 
