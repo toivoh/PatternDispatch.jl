@@ -2,5 +2,7 @@
  * Add Array pattern
  * Tidy up in Dispatch.jl, move some into DecisionTree?
  * Improve show_dispatch output
-   - Better symbol names
-
+   - Nicer names for unnamed temporaries
+ * Emit dispatch methods in reverse topological order
+ * Include `f = (args...)->dispatch(args...)` in show_dispatch printout
+ * Extract preparations from first predicate in code_predicate

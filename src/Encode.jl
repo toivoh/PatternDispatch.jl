@@ -12,15 +12,16 @@ typealias ResultsDict Dict{Node,Node}
 type Sequence
     intent::Intension
     results::ResultsDict
+    namer::Function
     seq::Vector{Node}
 
-    Sequence(i::Intension, r::ResultsDict) = new(i, r, Node[])
+    Sequence(i::Intension, r::ResultsDict, namer) = new(i, r, namer, Node[])
 end
-Sequence(intent::Intension) = Sequence(intent,   ResultsDict())
-Sequence(s::Sequence)       = Sequence(s.intent, copy(s.results))
 
-wrap(node::Guard) = node
-wrap(node::Node)  = Result(node)
+wrap(s::Sequence, node::Guard, orig_node::Node) = node
+function wrap(s::Sequence, node::Node, orig_node::Node)
+    Result(node, s.namer === nothing ? nothing : s.namer(orig_node))
+end
 
 function sequence!(s::Sequence, node::Node)
     if has(s.results, node)
@@ -30,7 +31,7 @@ function sequence!(s::Sequence, node::Node)
     end
 
     for dep in depsof(s.intent, node);  sequence!(s, dep)  end
-    newnode = s.results[node] = wrap(subs(s.results, node))
+    newnode = s.results[node] = wrap(s, subs(s.results, node), node)
     push(s.seq, newnode)
 end
 
@@ -42,7 +43,7 @@ function provide!(results::ResultsDict, node::Node, ex)
 end
 
 
-# ---- code_match etc: generate code from (instantiated) node sequence --------
+# ---- generate code from (instantiated) node sequence ------------------------
 
 function code_predicate(seq::Vector{Node})
     code = {}
@@ -73,7 +74,7 @@ function encode!(code::Vector, node::Result)
     if isa(ex, Symbol) || node.nrefs == 1
         node.ex = ex
     else
-        var = gensym("t")
+        var = node.name === nothing ? gensym("t") : node.name
         node.ex = var
         push(code, :( $var = $ex ))
     end

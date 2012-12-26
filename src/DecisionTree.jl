@@ -105,16 +105,28 @@ end
 
 # ---- seq_dispatch!: sequence decision tree ----------------------------------
 
+function make_namer(methods::Vector{Method})
+    (node::Node)->begin        
+        for method in methods
+            rb = method.sig.rev_bindings
+            if has(rb, node)
+                return symbol(string(rb[node], '_', method.id))
+            end
+        end
+        nothing
+    end
+end
+
 seq_dispatch!(results::ResultsDict, d::DNode) = nothing
 function seq_dispatch!(results::ResultsDict, m::MethodCall)
-    s = Sequence(m.m.sig.intent, results) # shouldn't need an Intension...
+    s = Sequence(m.m.sig.intent, results, make_namer([m.m]))
     for node in values(m.m.sig.bindings);  sequence!(s, node)  end
     m.bind_seq = s.seq
     m.bindings = Node[results[node] for node in m.m.bindings]
 end
 function seq_dispatch!(results::ResultsDict, d::Decision)
     results_fail = copy(results)
-    s = Sequence(d.intent, results)
+    s = Sequence(d.intent, results, make_namer(d.methods))
     for g in guardsof(d.intent);  sequence!(s, Guard(g))  end
     d.seq = s.seq
 

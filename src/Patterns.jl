@@ -25,12 +25,14 @@ const always  = Always()
 end
 type Result{T} <: Node{T}
     node::Node{T}
+    name::Union(Symbol,Nothing)
     nrefs::Int
     ex
     
-    Result(node::Node{T}) = new(node, 1, nothing)
+    Result(node::Node{T}, name) = new(node, name, 1, nothing)
 end
-Result{T}(node::Node{T}) = Result{T}(node)
+Result{T}(node::Node{T}, name) = Result{T}(node, name)
+Result(node::Node)             = Result(node, nothing)
 
 subs(d::Dict, node::Guard)    = Guard(   d[node.pred])
 
