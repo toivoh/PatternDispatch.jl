@@ -83,8 +83,8 @@ function add(mt::MethodTable, m::Method)
         sig2 = suffix_bindings(mk.sig, "_B")
 
         println("Warning: New @pattern method ", mt.name, sig1)
-        println(" is ambiguous with ", mt.name, sig2)
-        println(" Make sure ", mt.name, sig1&sig2, " is defined first")
+        println("         is ambiguous with   ", mt.name, sig2, '.')
+        println("         Make sure ", mt.name, sig1&sig2, " is defined first.")
     end
 
     # todo: only when necessary
