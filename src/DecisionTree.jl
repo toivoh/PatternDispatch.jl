@@ -69,13 +69,27 @@ end
 
 # ---- create decision tree ---------------------------------------------------
 
-firstitem(iter) = next(iter, start(iter))[1]
+function choose_pivot(top::MethodNode, ms::Set{MethodNode})
+    nmethods = length(ms)
+    p_opt = nothing
+    n_opt = nmethods+1
+    for pivot in top.gt & ms
+        below = ms & subDAGof(pivot)
+        npass = length(below)
+        nfail = nmethods - npass
+        n = max(npass, nfail)
+        if n < n_opt
+            p_opt, n_opt = pivot, n
+        end
+    end
+    p_opt::MethodNode
+end
 
 function build_dtree(top::MethodNode, ms::Set{MethodNode})
     if isempty(top.gt) || length(ms) == 1
         top.value.body === nothing ? nomethodnode : MethodCall(top.value)
     else        
-        pivot = firstitem(top.gt & ms)
+        pivot = choose_pivot(top, ms)
         below = subDAGof(pivot)
         pass = build_dtree(pivot, ms & below)
         fail = build_dtree(top,   ms - below)

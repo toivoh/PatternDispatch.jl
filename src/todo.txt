@@ -1,5 +1,4 @@
 
- * Introduce heuristic for pivot selection in decision tree
  * Add Array pattern
  * Tidy up in Dispatch.jl, move some into DecisionTree?
  * Improve show_dispatch output
