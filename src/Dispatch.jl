@@ -36,6 +36,8 @@ show_dispatch(io::IO, mt::MethodTable) = show_dispatch(io, mt, Tuple)
 function show_dispatch(io::IO, mt::MethodTable, Ts::Tuple) 
     if !mt.compiled;  create_dispatch(mt);  end
 
+    println("const ", mt.name, " = (args...)->dispatch(args...)\n")
+
     println("\n# ---- Pattern methods: ----")
     methods = methodsof(mt)
     methods = Method[filter(m->(m!=nomethod), methods)...]
@@ -158,7 +160,8 @@ function create_dispatch(mt::MethodTable, methods::Vector{Method},hullT::Tuple)
     code = code_dispatch(top, results)
     args = {:($argsym::$(quot(T))) for (argsym,T) in zip(argsyms,hullT)}    
     fdef = expr(:function, :( $(mt.name)($(args...)) ), code)
-    mt.julia_methods[hullT] = expr(:function, :( $(mt.name)($(args...)) ),code)
+#   mt.julia_methods[hullT] = expr(:function, :( $(mt.name)($(args...)) ),code)
+    mt.julia_methods[hullT] = expr(:function, :( dispatch($(args...)) ), code)
 
     eval(:(let
             const f = $(quot(mt.f))
