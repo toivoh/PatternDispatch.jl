@@ -36,7 +36,7 @@ show_dispatch(io::IO, mt::MethodTable) = show_dispatch(io, mt, Tuple)
 function show_dispatch(io::IO, mt::MethodTable, Ts::Tuple) 
     if !mt.compiled;  create_dispatch(mt);  end
 
-    println("const ", mt.name, " = (args...)->dispatch(args...)\n")
+    println("const ", mt.name, " = (args...)->dispatch(args...)")
 
     println("\n# ---- Pattern methods: ----")
     methods = methodsof(mt)
@@ -60,7 +60,7 @@ function show_dispatch(io::IO, mt::MethodTable, Ts::Tuple)
         end
     end
 
-    println("\n# ---- Generated methods: ----")
+    println("# ---- Dispatch methods: ----")
     for (f_Ts, fdef) in mt.julia_methods
         if f_Ts <: Ts
             Base.show_unquoted(io, subs_ex(subs_invocation, fdef))
