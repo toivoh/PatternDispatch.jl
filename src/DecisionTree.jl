@@ -158,8 +158,8 @@ function code_dispatch(d::Decision)
     pred = code_predicate(d.seq)
     pass = code_dispatch(d.pass)
     fail = code_dispatch(d.fail)
-    code = :( if $pred; $pass; else; $fail; end )
-    length(pre) == 0 ? code : (quote; $(pre...); $code; end)
+    code = expr(:if, pred, pass, fail)
+    length(pre) == 0 ? code : expr(:block, pre..., code)
 end
 
 end # module

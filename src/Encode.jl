@@ -50,7 +50,7 @@ function code_predicate(seq::Vector{Node})
     pred = nothing
     for node in seq
         if isa(node, Guard)
-            factor = isempty(code) ? node.pred.ex :  quote; $(code...); $(node.pred.ex) end
+            factor = isempty(code) ? node.pred.ex : expr(:block, code..., node.pred.ex)
             pred = pred === nothing ? factor : (:($pred && $factor))
             code = {}
         else
