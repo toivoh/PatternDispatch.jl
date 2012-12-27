@@ -108,9 +108,14 @@ function create_dispatch(mt::MethodTable)
     # as there is no# ambiguity among the patterns.
     methods = methodsof(mt)
     actual_methods = filter(m->(m != nomethod), methods)
-    hullTs = Set{Tuple}(Tuple[m.hullT for m in actual_methods]...)
-
-    for hullT in hullTs;  create_dispatch(mt, methods, hullT);  end
+    hullTs = Tuple[m.hullT for m in actual_methods]
+    
+    compiled = Set{Tuple}()
+    for hullT in reverse(hullTs)
+        if has(compiled, hullT); continue end
+        add(compiled, hullT)
+        create_dispatch(mt, methods, hullT)
+    end
 end
 
 ltT(S,T) = !(S==T) && (S<:T)

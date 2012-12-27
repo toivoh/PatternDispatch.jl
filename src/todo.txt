@@ -3,7 +3,6 @@
  * Tidy up in Dispatch.jl, move some into DecisionTree?
  * Improve show_dispatch output
    - Nicer names for unnamed temporaries
- * Emit dispatch methods in reverse topological order
  * Extract preparations from first predicate in code_predicate
    - reflect in results
  * Raise errors on unimplemented features:
