@@ -25,13 +25,20 @@ macro pattern(ex)
     code_pattern(ex)
 end
 function code_pattern(ex)
-    sig, body = split_fdef(ex)
+    sig, body = try
+        split_fdef(ex)
+    catch e
+        error("@pattern: not a function definition ($e)")
+    end
     @expect is_expr(sig, :call)
     fname, args = sig.args[1], sig.args[2:end]
+    if is_expr(fname, :curly)
+        error("@pattern: type parameters are not implemented")
+    end
     psig = :($(args...),)
     p_ex, bodyargs = recode(psig)
     
-    f = esc(fname)
+    f = esc(fname::Symbol)
     quote       
         wasbound = try
             f = $f

@@ -59,6 +59,10 @@ function recode(c::Context, arg, ex::Expr)
         for p in args[2:end]; recode(c, arg, p); end
     elseif head === :$ && nargs == 1
         push(c.guards, :(egalpred($arg, $(esc(args[1])))))
+    elseif head === :cell1d || head === :vcat
+        error("@pattern: array patterns are not yet implemented")
+    elseif head === :... && nargs == 1
+        error("@pattern: varargs are not yet implemented")
     else
         error("recode: unimplemented: ex = $ex")
     end

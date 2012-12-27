@@ -5,10 +5,6 @@
    - Nicer names for unnamed temporaries
  * Extract preparations from first predicate in code_predicate
    - reflect in results
- * Raise errors on unimplemented features:
-   - non-tree patterns
-   - type parameters
-   - varargs
  * Pull computations upward in decision tree as far as they are needed
    by every branch
  * Eliminate sure branches
