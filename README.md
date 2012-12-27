@@ -158,9 +158,13 @@ Known Issues
 
 Working Principles
 ==================
-Background:
+Semantics:
  * Pattern matching is conceptually performed on the arguments
    tuple of a function call, e.g. `(1,2,3)` in the call `f(1,2,3)`.
+ * Equality of values is defined in terms of `is`,
+   e.g. `@pattern f(3) = 5` matches on `f(x)` only if `is(x,3)`.
+
+Background:
  * To be able to match a single pattern against a value, 
    the pattern has to provide
    * a _predicate_ to check whether a given value matches,
