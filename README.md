@@ -138,7 +138,7 @@ Aim
  * Allow Julia's optimizations such as type inference to work with pattern
    dispatch
 
-Planned/possible features
+Planned/Possible Features
 -------------------------
  * Patterns for arrays and dicts
  * varargs, e.g. `(x,ys...)`, `{x,ys...}` etc.
@@ -150,6 +150,11 @@ Limitations
 -----------
  * Not yet terribly tested
  * No support for type parameters a la f{T}(...)
+
+Known Issues
+------------
+ * The code sometimes seems to trigger a type inference bug,
+   causing an error to be raised the Julia's type inference code.
 
 Working Principles
 ==================
