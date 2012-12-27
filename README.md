@@ -150,3 +150,40 @@ Limitations
 -----------
  * Not yet terribly tested
  * No support for type parameters a la f{T}(...)
+
+Working Principles
+==================
+Background:
+ * Pattern matching is conceptually performed on the arguments
+   tuple of a function call, e.g. `(1,2,3)` in the call `f(1,2,3)`.
+ * To be able to match a single pattern against a value, 
+   the pattern has to provide
+   * a _predicate_ to check whether a given value matches,
+   * a set of _pattern variable_ symbols,
+   * a _mapping_ of input values to pattern variable values, valid for matching patterns.
+ * To do most-specific pattern dispatch, patterns must also support
+   * a _partial order_ `p >= q`, 
+     read as "p is less specific or equal to q", or
+     "x matches q ==> x matches p, for any value x"
+   * an _intersection_ operation `p & q`; 
+     the pattern `p & q` will match those values that match both `p` and `q`.
+
+Implementation aspects:
+ * Patterns are represented by
+   the operations needed to evaluate the matching predicate
+   and the mapping, in the form of a 
+   [DAG](http://en.wikipedia.org/wiki/Directed_acyclic_graph).
+   * Each _node_ is either
+     * an _operation_, such as to evaluate `isa(x,Int)` or `x[3]`,
+       where `x` is the result value of another node, or
+     * a _source_, such as a literal value or the pattern's input value.
+   * Two nodes are equal iff they represent the same (sub-)DAG.
+ * A pattern is composed of
+   * a set of _guard predicates_ (boolean-valued nodes),
+     such that the pattern matches iff all predicates evaluate to true,
+   * a set of _bindings_ from symbols to nodes, to produce the mapping.
+ * Two patterns are equal iff their guard sets are equal.
+ * Pattern intersection `p & q` forms the union of the guards sets
+   of `p` and `q`. The result is simplified, e.g.
+   `x::Number & ::Int` reduces to `x::Int`.
+ * `p >= q` is evaluated as `(p & q) == q`.
