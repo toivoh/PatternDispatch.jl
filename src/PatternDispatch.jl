@@ -40,16 +40,17 @@ function code_pattern(ex)
     
     f = esc(fname::Symbol)
     quote       
-        wasbound = try
+        local wasbound = try
             f = $f
             true
         catch e
             false
         end
 
+        local mt
         if !wasbound
             mt = MethodTable($(quot(fname)))
-            const f = mt.f
+            local const f = mt.f
             const $f = (args...)->f(args...)
             method_tables[$f] = mt
         else
@@ -59,10 +60,10 @@ function code_pattern(ex)
             mt = method_tables[$f]
         end
 
-        p = $p_ex
-        bindings = Node[p.bindings[name] for name in $(quot(bodyargs))]
-        bodyfun = $(esc(:(($(bodyargs...),)->$body)))
-        method = Method(p, bindings, bodyfun, $(quot(body)))
+        local p = $p_ex
+        local bindings = Node[p.bindings[name] for name in $(quot(bodyargs))]
+        local bodyfun = $(esc(:(($(bodyargs...),)->$body)))
+        local method = Method(p, bindings, bodyfun, $(quot(body)))
         add(mt, method)
     end
 end
