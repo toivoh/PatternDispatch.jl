@@ -32,7 +32,11 @@ function recode(ex)
         Pattern(intension($(c.guards...)), 
                 $(expr(typed_dict, :(Symbol=>Node), c.bindings...)))
     end
-    p_ex, Symbol[b.args[1].args[1] for b in c.bindings]
+    syms = Symbol[b.args[1].args[1] for b in c.bindings] 
+    if length(syms) != length(Set{Symbol}(syms...))
+        error("@pattern: Non-tree patterns not yet implemented. Use unique argument names.")
+    end
+    p_ex, syms
 end
 
 recode(c::Context, arg, ex) = push(c.guards, :(egalpred($arg,$(quot(ex)))))
