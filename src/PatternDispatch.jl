@@ -40,6 +40,11 @@ function code_pattern(ex)
     
     f = esc(fname::Symbol)
     quote       
+        local p = $p_ex
+        local bindings = Node[p.bindings[name] for name in $(quot(bodyargs))]
+        local bodyfun = $(esc(:(($(bodyargs...),)->$body)))
+        local method = Method(p, bindings, bodyfun, $(quot(body)))
+
         local wasbound = try
             f = $f
             true
@@ -53,18 +58,13 @@ function code_pattern(ex)
             local const f = mt.f
             const $f = (args...)->f(args...)
             method_tables[$f] = mt
+            add(mt, method)
         else
             if !has(method_tables, $f)
                 error($("$fname is not a pattern function"))
             end
-            mt = method_tables[$f]
+            add(method_tables[$f], method)
         end
-
-        local p = $p_ex
-        local bindings = Node[p.bindings[name] for name in $(quot(bodyargs))]
-        local bodyfun = $(esc(:(($(bodyargs...),)->$body)))
-        local method = Method(p, bindings, bodyfun, $(quot(body)))
-        add(mt, method)
     end
 end
 
