@@ -78,7 +78,7 @@ function show(io::IO, p::Pattern)
     
     users = Dict{Node,Set}()
     for (name,arg) in p.bindings; adduser(users, name, arg); end
-    for g in guardsof(p.intent);  adduser(users, g);         end
+    for g in predsof(p.intent);  adduser(users, g);         end
 
     showpat(io, users, argnode)
 end

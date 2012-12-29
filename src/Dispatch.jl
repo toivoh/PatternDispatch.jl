@@ -139,7 +139,7 @@ function create_dispatch(mt::MethodTable, methods::Vector{Method},hullT::Tuple)
     # create dispatch code using given assumptions and args
     # todo: move some of this into DecisionTree
     results = ResultsDict()
-    for pred in guardsof(hull);  preguard!(results, Guard(pred));  end
+    for pred in predsof(hull);  preguard!(results, Guard(pred));  end
 
     argsyms = {}
     for k=1:length(hullT)

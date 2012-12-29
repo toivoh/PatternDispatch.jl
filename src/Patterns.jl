@@ -6,7 +6,7 @@ using Immutable
 export Node, Predicate, Guard, Never, Always, never, always
 export depsof
 export Intension, intension, naught, anything
-export encode, guardsof, depsof, subs, resultof
+export encode, predsof, depsof, subs, resultof
 export Pattern, suffix_bindings
 
 
@@ -38,7 +38,7 @@ end
 const naught   = Intension((Node=>Predicate)[always => never])
 const anything = Intension((Node=>Predicate)[])
 
-guardsof(x::Intension) = values(x.factors)
+predsof(x::Intension) = values(x.factors)
 
 depsof(node::Guard) = [node.pred]
 depsof(i::Intension,node::Node) = depsof(node)
@@ -55,7 +55,7 @@ function intension(factors::Predicate...)
     Intension(gs)
 end
 
-(&)(x::Intension, y::Intension) = intension(guardsof(x)..., guardsof(y)...)
+(&)(x::Intension, y::Intension) = intension(predsof(x)..., predsof(y)...)
 isequal(x::Intension, y::Intension) = isequal(x.factors, y.factors)
 
 >=(x::Intension, y::Intension) = (x & y) == y

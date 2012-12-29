@@ -128,7 +128,7 @@ end
 function seq_dispatch!(results::ResultsDict, d::Decision)
     results_fail = copy(results)
     s = Sequence(d.intent, results, make_namer(d.methods))
-    for g in guardsof(d.intent);  sequence!(s, Guard(g))  end
+    for p in predsof(d.intent);  sequence!(s, Guard(p))  end
 
     k=findfirst(node->isa(node,Guard), s.seq)
     d.pre = s.seq[1:(k-1)]

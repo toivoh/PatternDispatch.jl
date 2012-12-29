@@ -12,13 +12,13 @@ macro ipat(ex)
     recode(c, quot(argnode), ex)
     quote
         $(c.code...)
-        intension($(c.guards...))
+        intension($(c.preds...))
     end
 end
 
 type Context
     code::Vector
-    guards::Vector
+    preds::Vector
     bindings::Vector
     Context() = new({}, {}, {})
 end
@@ -29,7 +29,7 @@ function recode(ex)
     recode(c, quot(argnode), ex)
     p_ex = quote
         $(c.code...)
-        Pattern(intension($(c.guards...)), 
+        Pattern(intension($(c.preds...)), 
                 $(expr(typed_dict, :(Symbol=>Node), c.bindings...)))
     end
     syms = Symbol[b.args[1].args[1] for b in c.bindings] 
@@ -39,7 +39,7 @@ function recode(ex)
     p_ex, syms
 end
 
-recode(c::Context, arg, ex) = push(c.guards, :(egalpred($arg,$(quot(ex)))))
+recode(c::Context, arg, ex) = push(c.preds, :(egalpred($arg,$(quot(ex)))))
 recode(c::Context, arg, ex::Symbol) = push(c.bindings, :($(quot(ex))=>$arg))
 function recode(c::Context, arg, ex::Expr)
     head, args = ex.head, ex.args
@@ -47,13 +47,13 @@ function recode(c::Context, arg, ex::Expr)
     if head === :(::)
         @assert 1 <= nargs <= 2
         if nargs == 1
-            push(c.guards, :( typepred($arg, $(esc(args[1]))) ))
+            push(c.preds, :( typepred($arg, $(esc(args[1]))) ))
         else
-            push(c.guards, :( typepred($arg, $(esc(args[2]))) ))
+            push(c.preds, :( typepred($arg, $(esc(args[2]))) ))
             recode(c, arg, args[1])
         end
     elseif head === :tuple
-        push(c.guards, :( typepred($arg, $(quot(NTuple{nargs,Any}))) ))
+        push(c.preds, :( typepred($arg, $(quot(NTuple{nargs,Any}))) ))
         for (k, p) in enumerate(args)
             node = gensym("e$k")
             push(c.code, :( $node = tupref($arg, $k) ))
@@ -62,7 +62,7 @@ function recode(c::Context, arg, ex::Expr)
     elseif head === :call && args[1] == :~
         for p in args[2:end]; recode(c, arg, p); end
     elseif head === :$ && nargs == 1
-        push(c.guards, :(egalpred($arg, $(esc(args[1])))))
+        push(c.preds, :(egalpred($arg, $(esc(args[1])))))
     elseif head === :cell1d || head === :vcat
         error("@pattern: array patterns are not yet implemented")
     elseif head === :... && nargs == 1
