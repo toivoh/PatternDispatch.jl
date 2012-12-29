@@ -1,9 +1,25 @@
 
 module Encode
 using Meta, Patterns
-import Nodes.encode
+import Patterns.resultof, Nodes.encode
 export ResultsDict, Sequence, sequence!, code_predicate, encoded
 export preguard!, provide!
+
+
+# ---- Result: Node type for instantiated results -----------------------------
+
+type Result{T} <: Node{T}
+    node::Node{T}
+    name::Union(Symbol,Nothing)
+    nrefs::Int
+    ex
+    
+    Result(node::Node{T}, name) = new(node, name, 1, nothing)
+end
+Result{T}(node::Node{T}, name) = Result{T}(node, name)
+Result(node::Node)             = Result(node, nothing)
+
+resultof(node::Result) = (@assert node.ex != nothing; node.ex)
 
 
 # ---- sequence!: Create evaluation order, instantiate nodes into Result's ----

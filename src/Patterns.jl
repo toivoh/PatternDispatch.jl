@@ -3,10 +3,10 @@ module Patterns
 import Base.&, Base.isequal, Base.>=, Base.>, Base.<=, Base.<
 using Immutable
 
-export Node, Predicate, Guard, Result, Never, Always, never, always
+export Node, Predicate, Guard, Never, Always, never, always
 export depsof
 export Intension, intension, naught, anything
-export encode, guardsof, depsof, resultof, subs
+export encode, guardsof, depsof, subs, resultof
 export Pattern, suffix_bindings
 
 
@@ -23,20 +23,9 @@ const always  = Always()
 @immutable type Guard <: Node{None}
     pred::Predicate
 end
-type Result{T} <: Node{T}
-    node::Node{T}
-    name::Union(Symbol,Nothing)
-    nrefs::Int
-    ex
-    
-    Result(node::Node{T}, name) = new(node, name, 1, nothing)
-end
-Result{T}(node::Node{T}, name) = Result{T}(node, name)
-Result(node::Node)             = Result(node, nothing)
-
 subs(d::Dict, node::Guard)    = Guard(   d[node.pred])
 
-resultof(node::Result) = (@assert node.ex != nothing; node.ex)
+resultof(node::Node) = error("Undefined!")
 
 
 # ---- Intension --------------------------------------------------------------
