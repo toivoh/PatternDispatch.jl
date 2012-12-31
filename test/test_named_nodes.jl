@@ -1,4 +1,4 @@
-include(find_in_path("PatternDispatch.jl"))
+require("PatternDispatch.jl")
 
 module TestNamedNodes
 using PatternDispatch

@@ -1,4 +1,4 @@
-load("PatternDispatch.jl")
+require("PatternDispatch.jl")
 
 module TestExamples
 using PatternDispatch
