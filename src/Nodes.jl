@@ -37,7 +37,7 @@ encode(g::Isa)      = :(isa($(resultof(g.arg)), $(quot(g.typ  ))))
 # (&)(::Never,     ::Never) = never
 # (&)(::Predicate, ::Never) = never
 # (&)(::Never, ::Predicate) = never
-(&)(::Always,        ::Always) = allways
+(&)(::Always,        ::Always) = always
 (&)(node::Predicate, ::Always) = node
 (&)(::Always, node::Predicate) = node
 
