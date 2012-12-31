@@ -159,7 +159,7 @@ function code_dispatch(d::Decision)
     pass = code_dispatch(d.pass)
     fail = code_dispatch(d.fail)
     code = expr(:if, pred, pass, fail)
-    length(pre) == 0 ? code : expr(:block, pre..., code)
+    wrap(pre..., code)
 end
 
 end # module
