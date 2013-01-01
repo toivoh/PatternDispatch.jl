@@ -99,7 +99,7 @@ end
 function create_dispatch(mt::MethodTable)
     mt.compiled = true
     eval(:(let
-            const f = $(mt.f)
+            const f = $(quot(mt.f))
             f(args...) = error("No matching pattern method found")
         end))
 
