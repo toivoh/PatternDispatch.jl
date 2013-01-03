@@ -2,12 +2,12 @@
 module Methods
 import Base.add
 import Nodes
-using Meta, PartialOrder, Patterns, Dispatch, DecisionTree, Encode
+using Meta, PartialOrder, Patterns, Dispatch, Encode
 export MethodTable, Method, methodsof, show_dispatch
 
 # ---- Method Interface -------------------------------------------------------
 import Base.>=, Base.&
-import DecisionTree.domainof, DecisionTree.make_namer
+import Dispatch.domainof, Dispatch.make_namer
 export Method, nomethod, MethodNode
 
 type Method

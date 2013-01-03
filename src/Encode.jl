@@ -1,9 +1,10 @@
 
 module Encode
-using Meta, Patterns
+using Meta, Patterns, Dispatch
 import Patterns.resultof, Nodes.encode
 export ResultsDict, Sequence, sequence!, code_predicate, encoded
 export preguard!, provide!
+export code_dispatch, seq_dispatch!
 
 
 # ---- Result: Node type for instantiated results -----------------------------
@@ -58,6 +59,51 @@ function provide!(results::ResultsDict, node::Node, ex)
     results[node] = res
 end
 
+# ---- sequence decision tree -------------------------------------------------
+
+seq_dispatch!(results::ResultsDict, d::DNode) = nothing
+function seq_dispatch!(results::ResultsDict, m::MethodCall)
+    s = Sequence(domainof(m.m), results, make_namer([m.m]))
+    for node in values(m.m.sig.bindings);  sequence!(s, node)  end
+    m.bind_seq = s.seq
+    m.bindings = Node[results[node] for node in m.m.bindings]
+end
+function seq_dispatch!(results::ResultsDict, d::Decision)
+    results_fail = copy(results)
+    s = Sequence(d.domain, results, make_namer(d.methods))
+    for p in predsof(d.domain);  sequence!(s, Guard(p))  end
+
+    k=findfirst(node->isa(node,Guard), s.seq)
+    d.pre = s.seq[1:(k-1)]
+    d.seq = s.seq[k:end]
+
+    seq_dispatch!(results, d.pass)
+    seq_dispatch!(results_fail, d.fail)
+end
+
+
+# ---- decision tree -> dispatch code -----------------------------------------
+
+blockwrap(ex)       = ex
+blockwrap(exprs...) = expr(:block, exprs...)
+
+function code_dispatch(::NoMethodNode)
+    :( error("No matching pattern method found") )
+end
+function code_dispatch(m::MethodCall)
+    prebind = encoded(m.bind_seq)
+    args = {resultof(node) for node in m.bindings}
+    blockwrap(prebind...,
+         expr(:call, quot(m.m.body), args...))
+end
+function code_dispatch(d::Decision)
+    pre = encoded(d.pre)
+    pred = code_predicate(d.seq)
+    pass = code_dispatch(d.pass)
+    fail = code_dispatch(d.fail)
+    code = expr(:if, pred, pass, fail)
+    blockwrap(pre..., code)
+end
 
 # ---- generate code from (instantiated) node sequence ------------------------
 
