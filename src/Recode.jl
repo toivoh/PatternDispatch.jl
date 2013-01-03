@@ -3,7 +3,7 @@
 module Recode
 using Meta, Patterns, Nodes
 export recode, @qpat, @ipat
-export tupref, egalpred, typepred
+export tupref, egalpred, typepred, lengthnode
 
 macro qpat(ex)
     recode(ex)[1]
@@ -54,7 +54,8 @@ function recode(c::Context, arg, ex::Expr)
             recode(c, arg, args[1])
         end
     elseif head === :tuple
-        push(c.preds, :( typepred($arg, $(quot(NTuple{nargs,Any}))) ))
+        push(c.preds, :( typepred($arg, $(quot(Tuple))) ))
+        push(c.preds, :( egalpred(lengthnode($arg), $(quot(nargs))) ))
         for (k, p) in enumerate(args)
             node = gensym("e$k")
             push(c.code, :( $node = tupref($arg, $k) ))

@@ -54,11 +54,14 @@ samearg(n::Node, m::Node) = @assert n.arg===m.arg
 depsof(node::Union(Arg, Never, Always))  = []
 depsof(node::Union(TupleRef, Length, Egal, Isa)) = [node.arg]
 
-depsof(i::Intension,node::TupleRef) = Node[node.arg,Guard(i.factors[node.arg])]
-
+function depsof(i::Intension, n::TupleRef)
+    Node[n.arg, Guard(i.factors[n.arg]), Guard(i.factors[Length(n.arg)])]
+end
+depsof(i::Intension, node::Length) = Node[node.arg, Guard(i.factors[node.arg])]
 
 function intension(Ts::Tuple)
-    intension(typepred(argnode, NTuple{length(Ts),Any}),
+    intension(typepred(argnode, Tuple),
+              egalpred(lengthnode(argnode), length(Ts)),
               {typepred(tupref(argnode, k),T) for (k,T) in enumerate(Ts)}...)
 end
 
@@ -71,7 +74,8 @@ function julia_signature_of(intent::Intension)
     if !has(intent.factors, argnode);  return Tuple;  end
     garg::Isa = intent.factors[argnode]
     @assert garg.typ <: Tuple
-    nargs = length(garg.typ)
+    glen::Egal = intent.factors[Length(argnode)]
+    nargs = glen.value
     tuple({get_type(intent, tupref(argnode, k)) for k=1:nargs}...)
 end
 julia_signature_of(p::Pattern) = julia_signature_of(p.intent)
@@ -93,7 +97,7 @@ function adduser(users::Dict, user, dep::Node)
     add(users[dep], user)
 end
 
-const typeorder = [Symbol=>1, TupleRef=>2, Egal=>3, Isa=>3]
+const typeorder = [Symbol=>1, Length=>2, TupleRef=>3, Egal=>4, Isa=>4]
 cmp(x,y) = typeorder[typeof(x)] < typeorder[typeof(y)]
 cmp(x::Symbol,   y::Symbol)   = string(x) < string(y)
 cmp(x::TupleRef, y::TupleRef) = x.index   < y.index
@@ -104,12 +108,15 @@ function showpat(io::IO, users::Dict, node::Node)
     # printing order: Symbol, TupleRef, Egal, Isa
     us = sort(cmp, {users[node]...})
     k, n = 1, length(us)
+    printed = false
     while k <= n
         u = us[k]
-        if k > 1 && !isa(u, Isa); print(io, '~'); end
-        if isa(u, Symbol); print(io, u)
-        elseif isa(u, Egal); print(io, u.value)
-        elseif isa(u, Isa); print(io, "::", u.typ)
+#        if k > 1 && !isa(u, Isa); print(io, '~'); end
+        if printed && !(isa(u, Isa) || isa(u, Length)); print(io, '~'); end
+        if isa(u, Symbol); print(io, u); printed = true
+        elseif isa(u, Egal); print(io, u.value); printed = true
+        elseif isa(u, Isa); print(io, "::", u.typ); printed = true
+        elseif isa(u, Length) # todo: do something
         elseif isa(u, TupleRef)
             print(io, '(')
             i = 0
@@ -124,7 +131,8 @@ function showpat(io::IO, users::Dict, node::Node)
             end
             if i == 1; print(io, ','); end
             print(io, ')')
-            if k == n && isa(us[k], Isa) && us[k].typ == NTuple{i}; return; end
+            if k == n && isa(us[k], Isa) && us[k].typ == Tuple; return; end
+            printed = true
         else
             error("unknown node type")
         end
