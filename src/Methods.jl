@@ -1,11 +1,12 @@
 
 module Methods
 import Base.add, Base.>=, Base.&
-import Dispatch.domainof, Dispatch.make_namer
+import Dispatch.domainof, Dispatch.signatureof, Dispatch.make_namer
+import Dispatch.is_empty_domain, Dispatch.hullof
 import Nodes
 using Meta, PartialOrder, Patterns, Dispatch, Encode
 
-export MethodTable, Method, methodsof, show_dispatch
+export MethodTable, Method, show_dispatch
 
 
 # ---- Method -----------------------------------------------------------------
@@ -30,6 +31,9 @@ const nomethod = Method(Pattern(anything), Node[], nothing, nothing)
 (&)(m::Method,  i::Intension) = m.sig.intent & i
 
 domainof(m::Method) = m.sig.intent
+hullof(m::Method)   = intension(m.hullT)
+signatureof(m::Method)         = m.sig
+signatureof(m::Method, suffix) = suffix_bindings(m.sig, suffix)
 
 function make_namer(methods::Vector{Method})
     (node::Node)->begin        
@@ -42,6 +46,9 @@ function make_namer(methods::Vector{Method})
         nothing
     end
 end
+
+
+is_empty_domain(domain::Intension) = (domain === naught)
 
 
 # ---- MethodTable ------------------------------------------------------------
@@ -68,6 +75,77 @@ type MethodTable
             end))
         mt
     end
+end
+
+methodsof(mt::MethodTable) = [m.value for m in ordered_subDAGof(mt.top)]
+
+function add(mt::MethodTable, m::Method)
+    m.id = (mt.method_counter += 1)
+    addmethod!(mt.top, mt.name, m)
+
+    # todo: recompile only when necessary (when is that?)
+    if mt.compiled;  compile!(mt)  end
+end
+
+function compile!(mt::MethodTable)
+    mt.compiled = true
+    eval(:(let
+            const f = $(quot(mt.f))
+            f(args...) = error("No matching pattern method found")
+        end))
+
+    # NB: Lists methods in topological order;
+    # avoids ambiguity warnings from julia as long
+    # as there is no ambiguity among the patterns.
+    methods = methodsof(mt)
+    hullTs = Tuple[m.hullT for m in filter(m->(m != nomethod), methods)]
+    
+    compiled = Set{Tuple}()
+    for hullT in reverse(hullTs)
+        if has(compiled, hullT); continue end
+        add(compiled, hullT)
+        compile!(mt, methods, hullT)
+    end
+end
+
+function compile!(mt::MethodTable, methods::Vector{Method},hullT::Tuple)
+    hull = intension(hullT)
+    top = simplify(mt.top, hull)
+    dtree = build_dtree(top)
+    
+    # create dispatch code using given assumptions and args
+    # todo: Move results manipulation into Encode
+    results = ResultsDict()
+    for pred in predsof(hull);  preguard!(results, Guard(pred));  end
+
+    argsyms = {}
+    for k=1:length(hullT)
+        node, name = Nodes.tupref(Nodes.argnode, k), nothing
+        for method in methods
+            rb = method.sig.rev_bindings
+            if has(rb, node)
+                name = symbol(string(rb[node], '_', method.id))
+                break
+            end
+        end
+        if name === nothing;  name = symbol("arg$k");  end
+        
+        push(argsyms, name)
+        provide!(results, node, name)
+    end
+    
+    seq_dispatch!(results, dtree)
+    code = code_dispatch(dtree)
+
+
+    args = {:($argsym::$(quot(T))) for (argsym,T) in zip(argsyms,hullT)}    
+    fdef = expr(:function, :( $(mt.name)($(args...)) ), code)
+    mt.julia_methods[hullT] = expr(:function, :( dispatch($(args...)) ), code)
+
+    eval(:(let
+            const f = $(quot(mt.f))
+            f($(args...)) = $code
+        end))
 end
 
 show_dispatch(mt::MethodTable, args...) = show_dispatch(OUTPUT_STREAM, 
@@ -107,116 +185,6 @@ function show_dispatch(io::IO, mt::MethodTable, Ts::Tuple)
             print(io, "\n\n")
         end
     end
-end
-
-function add(mt::MethodTable, m::Method)
-    m.id = (mt.method_counter += 1)
-    insert!(mt.top, MethodNode(m))
-    
-    methods = methodsof(mt)
-    for mk in methods
-        lb = m.sig.intent & mk.sig.intent
-        if lb === naught; continue; end
-        if any([ml.sig.intent == lb for ml in methods]) continue; end
-        
-        sig1 = suffix_bindings(m.sig,  "_A")
-        sig2 = suffix_bindings(mk.sig, "_B")
-
-        println("Warning: New @pattern method ", mt.name, sig1)
-        println("         is ambiguous with   ", mt.name, sig2, '.')
-        println("         Make sure ", mt.name, sig1&sig2, " is defined first.")
-    end
-
-    # todo: only when necessary
-    if mt.compiled;  compile!(mt)  end
-end
-
-function methodsof(mt::MethodTable)
-    ms = ordered_subDAGof(mt.top)
-    [m.value for m in ms]
-end
-
-function compile!(mt::MethodTable)
-    mt.compiled = true
-    eval(:(let
-            const f = $(quot(mt.f))
-            f(args...) = error("No matching pattern method found")
-        end))
-
-    # NB: Lists methods in topological order;
-    # avoids ambiguity warnings from julia as long
-    # as there is no# ambiguity among the patterns.
-    methods = methodsof(mt)
-    actual_methods = filter(m->(m != nomethod), methods)
-    hullTs = Tuple[m.hullT for m in actual_methods]
-    
-    compiled = Set{Tuple}()
-    for hullT in reverse(hullTs)
-        if has(compiled, hullT); continue end
-        add(compiled, hullT)
-        compile!(mt, methods, hullT)
-    end
-end
-
-ltT(S,T) = !(S==T) && (S<:T)
-function compile!(mt::MethodTable, methods::Vector{Method},hullT::Tuple)
-    top = copyDAG(mt.top)
-
-    # filter out too specific methods
-    keep = Set{Method}(filter(m->!ltT(m.hullT, hullT), methods)...)
-    @assert !isempty(keep)
-    raw_filter!(top, keep)
-
-    # filter out non-questions
-    hull = intension(hullT)
-    top = simplify!(top, hull)
-
-    dtree = build_dtree(top)
-
-#     @show hullT
-#     @show tuple([node.value.sig for node in subDAGof(top)]...)
-#     @show top.value.sig
-#     println()
-    
-    # create dispatch code using given assumptions and args
-    # todo: move some of this into DecisionTree
-    results = ResultsDict()
-    for pred in predsof(hull);  preguard!(results, Guard(pred));  end
-
-    argsyms = {}
-    for k=1:length(hullT)
-        node, name = Nodes.tupref(Nodes.argnode, k), nothing
-        for method in methods
-            rb = method.sig.rev_bindings
-            if has(rb, node)
-                name = symbol(string(rb[node], '_', method.id))
-                break
-            end
-        end
-        if name === nothing;  name = symbol("arg$k");  end
-        
-        push(argsyms, name)
-        provide!(results, node, name)
-    end
-    
-#     argsyms = {gensym("arg") for k=1:length(hullT)}
-#     for (k, argsym) in enumerate(argsyms)
-#         provide!(results, Nodes.tupref(Nodes.argnode, k), argsym)
-#     end
-
-    seq_dispatch!(results, dtree)
-    code = code_dispatch(dtree)
-
-
-    args = {:($argsym::$(quot(T))) for (argsym,T) in zip(argsyms,hullT)}    
-    fdef = expr(:function, :( $(mt.name)($(args...)) ), code)
-#   mt.julia_methods[hullT] = expr(:function, :( $(mt.name)($(args...)) ),code)
-    mt.julia_methods[hullT] = expr(:function, :( dispatch($(args...)) ), code)
-
-    eval(:(let
-            const f = $(quot(mt.f))
-            f($(args...)) = $code
-        end))
 end
 
 end # module

@@ -3,16 +3,68 @@ module Dispatch
 using Meta, PartialOrder
 
 export DNode, Decision, MethodCall, NoMethodNode, build_dtree
-export domainof, make_namer
-export build_dtree
+export domainof, signatureof, make_namer
+export addmethod!, simplify, build_dtree
 
 import Patterns
 const INode = Patterns.Node # todo: remove!
 
 ## Method interface: ##
 
-domainof(method) = error("unimplemented!")
+signatureof(method)  = error("unimplemented!")
+domainof(method)     = error("unimplemented!")
+is_empty_domain(dom) = error("unimplemented!")
+hullof(method)       = error("unimplemented!")
 make_namer(methods::Vector) = error("unimplemented!")
+
+
+# ---- Method DAG manipulation ------------------------------------------------
+
+methodsof{M}(top::Node{M}) = [node.value for node in subDAGof(top)]
+
+function addmethod!{M}(top::Node{M}, name::Symbol, m::M)
+    insert!(top, Node(m))
+    
+    methods = methodsof(top)
+    for mk in methods
+        lb = domainof(m) & domainof(mk)
+        if is_empty_domain(lb); continue; end
+        if any([domainof(ml) == lb for ml in methods]) continue; end
+        
+        sig1 = signatureof(m,  "_A")
+        sig2 = signatureof(mk, "_B")
+
+        println("Warning: New @pattern method ", name, sig1)
+        println("         is ambiguous with   ", name, sig2, '.')
+        println("         Make sure ", name, sig1 & sig2," is defined first.")
+    end
+end
+
+function simplify{M}(top::Node{M}, hull)
+    top = copyDAG(top)
+
+    # filter out too specific methods
+    keep = Set{M}(filter(m->!(hullof(m) < hull), methodsof(top))...)
+    @assert !isempty(keep)
+    raw_filter!(top, keep)
+
+    # filter out non-questions
+    top = simplify!(top, hull)
+end
+
+simplify!{T}(n::Node{T}, domain) = simplify!((Node{T}=>Node{T})[], n, domain)
+function simplify!{T}(subs::Dict{Node{T},Node{T}}, node::Node{T}, domain)
+    if has(subs, node);  return subs[node]  end
+    ndom = node.value & domain
+    for child in node.gt
+        if ndom == child.value & domain
+            return subs[node] = simplify!(child, domain)
+        end
+    end
+
+    node.gt = Set{Node{T}}([simplify!(child, domain) for child in node.gt]...)
+    subs[node] = node
+end
 
 
 # ---- Decision Tree ----------------------------------------------------------

@@ -27,20 +27,6 @@ function raw_filter!{T}(seen::Set{Node{T}}, node::Node{T}, keep::Set{T})
     for child in node.gt;  raw_filter!(child, keep)  end
 end
 
-simplify!{T}(n::Node{T}, domain) = simplify!((Node{T}=>Node{T})[], n, domain)
-function simplify!{T}(subs::Dict{Node{T},Node{T}}, node::Node{T}, domain)
-    if has(subs, node);  return subs[node]  end
-    ndom = node.value & domain
-    for child in node.gt
-        if ndom == child.value & domain
-            return subs[node] = simplify!(child, domain)
-        end
-    end
-
-    node.gt = Set{Node{T}}([simplify!(child, domain) for child in node.gt]...)
-    subs[node] = node
-end
-
 subDAGof{T}(node::Node{T}) = (sub = Set{Node{T}}(); addsubDAG!(sub, node); sub)
 function addsubDAG!{T}(seen::Set{Node{T}}, node::Node{T})
     if has(seen, node); return; end
