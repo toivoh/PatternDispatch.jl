@@ -2,7 +2,7 @@
 module Dispatch
 using Meta, PartialOrder
 
-export DNode, Decision, MethodCall, NoMethodNode, build_dtree
+export DNode, Decision, MethodCall, NoMethodNode
 export domainof, signatureof, make_namer
 export addmethod!, simplify, build_dtree
 
