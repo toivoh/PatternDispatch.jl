@@ -13,7 +13,7 @@ include(julia_pkgdir()*"/PatternDispatch/src/Dispatch.jl")
 include(julia_pkgdir()*"/PatternDispatch/src/Encode.jl")
 
 include(julia_pkgdir()*"/PatternDispatch/src/Methods.jl")
-using Meta, Patterns, Nodes, Recode, Methods
+using Meta, Patterns, Recode, Methods
 import Methods.show_dispatch
 
 

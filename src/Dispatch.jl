@@ -1,6 +1,6 @@
 
 module Dispatch
-using Meta, PartialOrder
+using PartialOrder
 
 export DNode, Decision, MethodCall, NoMethodNode
 export domainof, signatureof, make_namer

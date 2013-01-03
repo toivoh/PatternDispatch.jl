@@ -3,6 +3,7 @@
 module Recode
 using Meta, Patterns, Nodes
 export recode, @qpat, @ipat
+export tupref, egalpred, typepred
 
 macro qpat(ex)
     recode(ex)[1]
