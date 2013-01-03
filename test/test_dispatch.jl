@@ -16,6 +16,15 @@ using PatternDispatch
 
 @assert g(11) == 11
 @assert g((2,6)) == 12
+@assert g([2,6]) == [2,6]
+
+
+@pattern g2([x,y]) = x*y
+@pattern g2(x)     = x
+
+@assert g2(11) == 11
+@assert g2([2,6]) == 12
+@assert g2((2,6)) == (2,6)
 
 
 @pattern h(x,(y,z)) = [x,y,z]

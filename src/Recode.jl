@@ -53,20 +53,21 @@ function recode(c::Context, arg, ex::Expr)
             push(c.preds, :( typepred($arg, $(esc(args[2]))) ))
             recode(c, arg, args[1])
         end
-    elseif head === :tuple
-        push(c.preds, :( typepred($arg, $(quot(Tuple))) ))
+    elseif head === :tuple || head === :vcat
+        argtype = (head === :tuple) ? Tuple : Vector
+        push(c.preds, :( typepred($arg, $(quot(argtype))) ))
         push(c.preds, :( egalpred(lengthnode($arg), $(quot(nargs))) ))
         for (k, p) in enumerate(args)
             node = gensym("e$k")
             push(c.code, :( $node = refnode($arg, $k) ))
             recode(c, node, p)
         end
+    elseif head === :cell1d
+        error("@pattern: use [] for array patterns")
     elseif head === :call && args[1] == :~
         for p in args[2:end]; recode(c, arg, p); end
     elseif head === :$ && nargs == 1
         push(c.preds, :(egalpred($arg, $(esc(args[1])))))
-    elseif head === :cell1d || head === :vcat
-        error("@pattern: array patterns are not yet implemented")
     elseif head === :... && nargs == 1
         error("@pattern: varargs are not yet implemented")
     else

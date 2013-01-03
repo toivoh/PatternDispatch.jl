@@ -27,6 +27,7 @@ function addmethod!{M}(top::Node{M}, name::Symbol, m::M)
     
     methods = methodsof(top)
     for mk in methods
+        if mk === m;  continue  end
         lb = domainof(m) & domainof(mk)
         if is_empty_domain(lb); continue; end
         if any([domainof(ml) == lb for ml in methods]) continue; end

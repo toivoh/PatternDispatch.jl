@@ -97,7 +97,7 @@ function adduser(users::Dict, user, dep::Node)
     add(users[dep], user)
 end
 
-const typeorder = [Symbol=>1, Length=>2, Ref=>3, Egal=>4, Isa=>4]
+const typeorder = [Symbol=>1, Length=>2, Egal=>3, Isa=>3, Ref=>4]
 cmp(x,y) = typeorder[typeof(x)] < typeorder[typeof(y)]
 cmp(x::Symbol, y::Symbol) = string(x) < string(y)
 cmp(x::Ref,    y::Ref)    = x.index   < y.index
@@ -109,16 +109,26 @@ function showpat(io::IO, users::Dict, node::Node)
     us = sort(cmp, {users[node]...})
     k, n = 1, length(us)
     printed = false
+    typ = Any
     while k <= n
         u = us[k]
 #        if k > 1 && !isa(u, Isa); print(io, '~'); end
         if printed && !(isa(u, Isa) || isa(u, Length)); print(io, '~'); end
         if isa(u, Symbol); print(io, u); printed = true
         elseif isa(u, Egal); print(io, u.value); printed = true
-        elseif isa(u, Isa); print(io, "::", u.typ); printed = true
+        elseif isa(u, Isa)
+            typ = u.typ
+            if k+1 <= n && isa(us[k+1], Ref)
+                if (u.typ == Tuple) || (u.typ == Vector)
+                    k += 1
+                    continue
+                end
+            end
+            print(io, "::", u.typ); printed = true            
         elseif isa(u, Length) # todo: do something
         elseif isa(u, Ref)
-            print(io, '(')
+#            print(io, '(')
+            print(io, typ <: Vector ? '[' : '(')
             i = 0
             while k <= n && isa(us[k], Ref)
                 if i==0; i=1; end
@@ -130,8 +140,9 @@ function showpat(io::IO, users::Dict, node::Node)
                 k += 1
             end
             if i == 1; print(io, ','); end
-            print(io, ')')
-            if k == n && isa(us[k], Isa) && us[k].typ == Tuple; return; end
+            print(io, typ <: Vector ? ']' : ')')
+#            print(io, ')')
+#            if k == n && isa(us[k], Isa) && us[k].typ == Tuple; return; end
             printed = true
         else
             error("unknown node type")
