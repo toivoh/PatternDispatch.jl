@@ -29,11 +29,13 @@ const nomethod = Method(Pattern(anything), Node[], nothing, nothing)
 
 >=(x::Method, y::Method) = x.sig.intent >= y.sig.intent
 #==(x::Method, y::Method) = x.sig.intent == y.sig.intent
-#(&)(m::Method,  i::Intension) = Method(m.sig & Pattern(i), m.bindings, m.body)
 (&)(m::Method,  i::Intension) = m.sig.intent & i
 
+domainof(m::Method) = m.sig.intent
+
 typealias MethodNode PartialOrder.Node{Method}
-intentof(m::MethodNode) = m.value.sig.intent
+domainof(m::MethodNode) = m.value.sig.intent
+
 
 
 # ---- Decision Tree ----------------------------------------------------------
@@ -41,14 +43,14 @@ intentof(m::MethodNode) = m.value.sig.intent
 abstract DNode
 
 type Decision <: DNode
-    intent::Intension
+    domain
     pass
     fail
     methods::Vector{Method}
     pre::Vector{Node}
     seq::Vector{Node}
 
-    Decision(intent::Intension, pass, fail, ms) = new(intent, pass, fail, ms)
+    Decision(domain, pass, fail, ms) = new(domain, pass, fail, ms)
 end
 
 type MethodCall <: DNode
@@ -99,7 +101,7 @@ function build_dtree(top::MethodNode, ms::Set{MethodNode})
 
         methods = [node.value for node in filter(node->has(ms, node), 
                                                  ordered_subDAGof(top))]
-        Decision(intentof(pivot), pass, fail, methods)
+        Decision(domainof(pivot.value), pass, fail, methods)
     end    
 end
 
@@ -120,15 +122,15 @@ end
 
 seq_dispatch!(results::ResultsDict, d::DNode) = nothing
 function seq_dispatch!(results::ResultsDict, m::MethodCall)
-    s = Sequence(m.m.sig.intent, results, make_namer([m.m]))
+    s = Sequence(domainof(m.m), results, make_namer([m.m]))
     for node in values(m.m.sig.bindings);  sequence!(s, node)  end
     m.bind_seq = s.seq
     m.bindings = Node[results[node] for node in m.m.bindings]
 end
 function seq_dispatch!(results::ResultsDict, d::Decision)
     results_fail = copy(results)
-    s = Sequence(d.intent, results, make_namer(d.methods))
-    for p in predsof(d.intent);  sequence!(s, Guard(p))  end
+    s = Sequence(d.domain, results, make_namer(d.methods))
+    for p in predsof(d.domain);  sequence!(s, Guard(p))  end
 
     k=findfirst(node->isa(node,Guard), s.seq)
     d.pre = s.seq[1:(k-1)]
