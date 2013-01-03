@@ -9,9 +9,9 @@ include(julia_pkgdir()*"/PatternDispatch/src/Nodes.jl")
 include(julia_pkgdir()*"/PatternDispatch/src/Recode.jl")
 include(julia_pkgdir()*"/PatternDispatch/src/Encode.jl")
 include(julia_pkgdir()*"/PatternDispatch/src/DecisionTree.jl")
-include(julia_pkgdir()*"/PatternDispatch/src/Dispatch.jl")
-using Meta, Patterns, Nodes, Recode, Dispatch
-import Dispatch.show_dispatch
+include(julia_pkgdir()*"/PatternDispatch/src/Methods.jl")
+using Meta, Patterns, Nodes, Recode, Methods
+import Methods.show_dispatch
 
 
 const method_tables = Dict{Function, MethodTable}()

@@ -1,5 +1,5 @@
 
-module Dispatch
+module Methods
 import Base.add
 import Nodes
 using Meta, PartialOrder, Patterns, DecisionTree, Encode
