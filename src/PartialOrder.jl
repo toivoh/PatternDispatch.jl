@@ -1,6 +1,6 @@
 
 module PartialOrder
-export insert!, subDAGof, ordered_subDAGof, copyDAG, raw_filter!, simplify!
+export Node, insert!, subDAGof, ordered_subDAGof, copyDAG, raw_filter!, simplify!
 
 type Node{T}
     value::T

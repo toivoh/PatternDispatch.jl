@@ -1,11 +1,10 @@
 
 module Dispatch
-using Meta, PartialOrder, Patterns
+using Meta, PartialOrder
+
 export DNode, Decision, MethodCall, NoMethodNode, build_dtree
 export domainof, make_namer
 
-import PartialOrder
-const PNode = PartialOrder.Node # todo: use Node instead
 import Patterns
 const INode = Patterns.Node # todo: remove!
 
@@ -46,7 +45,7 @@ const nomethodnode = NoMethodNode()
 
 # ---- create decision tree ---------------------------------------------------
 
-function choose_pivot{M}(top::PNode{M}, ms::Set{PNode{M}})
+function choose_pivot{M}(top::Node{M}, ms::Set{Node{M}})
     nmethods = length(ms)
     p_opt = nothing
     n_opt = nmethods+1
@@ -59,10 +58,10 @@ function choose_pivot{M}(top::PNode{M}, ms::Set{PNode{M}})
             p_opt, n_opt = pivot, n
         end
     end
-    p_opt::PNode{M}
+    p_opt::Node{M}
 end
 
-function build_dtree{M}(top::PNode{M}, ms::Set{PNode{M}})
+function build_dtree{M}(top::Node{M}, ms::Set{Node{M}})
     if isempty(top.gt) || length(ms) == 1
         top.value.body === nothing ? nomethodnode : MethodCall(top.value)
     else        
