@@ -1,14 +1,14 @@
 
 module Methods
-import Base.add
+import Base.add, Base.>=, Base.&
+import Dispatch.domainof, Dispatch.make_namer
 import Nodes
 using Meta, PartialOrder, Patterns, Dispatch, Encode
+
 export MethodTable, Method, methodsof, show_dispatch
 
-# ---- Method Interface -------------------------------------------------------
-import Base.>=, Base.&
-import Dispatch.domainof, Dispatch.make_namer
-export Method, nomethod, MethodNode
+
+# ---- Method -----------------------------------------------------------------
 
 type Method
     sig::Pattern
@@ -43,55 +43,52 @@ function make_namer(methods::Vector{Method})
     end
 end
 
-typealias MethodNode PartialOrder.Node{Method}
-
 
 # ---- MethodTable ------------------------------------------------------------
+
+typealias MethodNode PartialOrder.Node{Method}
 
 type MethodTable
     name::Symbol
     top::MethodNode
-    f::Function
+
     compiled::Bool
     julia_methods::Dict{Tuple,Any}
     method_counter::Int
+    f::Function
 
     function MethodTable(name::Symbol) 
-        f = eval(:(let
-                $name(args...) = error("No matching pattern method found")
-                $name
-            end))
-        mt = new(name, MethodNode(nomethod), f, false, (Tuple=>Any)[], 0)
-        eval(:(let
-                const f = $f
-                function f(args...)
-                    create_dispatch($(quot(mt)))
+        mt = new(name, MethodNode(nomethod), false, (Tuple=>Any)[], 0)
+        mt.f = eval(:(let
+                function $name(args...)
+                    compile!($(quot(mt)))
                     $(quot(mt)).f(args...)
                 end
+                $name
             end))
         mt
     end
 end
 
-show_dispatch(mt::MethodTable, args...) = show_dispatch(OUTPUT_STREAM, mt, args...)
-show_dispatch(io::IO, args...) = error("No method")
+show_dispatch(mt::MethodTable, args...) = show_dispatch(OUTPUT_STREAM, 
+                                                        mt, args...)
 show_dispatch(io::IO, mt::MethodTable) = show_dispatch(io, mt, Tuple)
 function show_dispatch(io::IO, mt::MethodTable, Ts::Tuple) 
-    if !mt.compiled;  create_dispatch(mt);  end
+    if !mt.compiled;  compile!(mt)  end
 
     println("const ", mt.name, " = (args...)->dispatch(args...)")
 
     println("\n# ---- Pattern methods: ----")
     methods = methodsof(mt)
-    methods = Method[filter(m->(m!=nomethod), methods)...]
-
     mnames = (Function=>Symbol)[]
     for (id, method) in sort([(m.id, m) for m in methods])
-        #if !(method.hullT <: Ts); continue end
+        if method === nomethod; continue end
+
         println(io, "# ", mt.name, method.sig)
-        args = keys(method.sig.bindings) # Right order? Does it matter?
         mname = symbol(string("match", method.id))
         mnames[method.body] = mname
+
+        args = keys(method.sig.bindings) # Right order? Does it matter?
         Base.show_unquoted(io, expr(:function, :($mname($(args...))), 
                                     method.body_ex))
         print(io,"\n\n")
@@ -131,7 +128,7 @@ function add(mt::MethodTable, m::Method)
     end
 
     # todo: only when necessary
-    if mt.compiled;  create_dispatch(mt)  end
+    if mt.compiled;  compile!(mt)  end
 end
 
 function methodsof(mt::MethodTable)
@@ -139,7 +136,7 @@ function methodsof(mt::MethodTable)
     [m.value for m in ms]
 end
 
-function create_dispatch(mt::MethodTable)
+function compile!(mt::MethodTable)
     mt.compiled = true
     eval(:(let
             const f = $(quot(mt.f))
@@ -157,12 +154,12 @@ function create_dispatch(mt::MethodTable)
     for hullT in reverse(hullTs)
         if has(compiled, hullT); continue end
         add(compiled, hullT)
-        create_dispatch(mt, methods, hullT)
+        compile!(mt, methods, hullT)
     end
 end
 
 ltT(S,T) = !(S==T) && (S<:T)
-function create_dispatch(mt::MethodTable, methods::Vector{Method},hullT::Tuple)
+function compile!(mt::MethodTable, methods::Vector{Method},hullT::Tuple)
     top = copyDAG(mt.top)
 
     # filter out too specific methods
