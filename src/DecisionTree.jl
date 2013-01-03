@@ -2,7 +2,6 @@
 module DecisionTree
 import Base.==
 import PartialOrder
-import Nodes.julia_signature_of
 using Meta, PartialOrder, Patterns, Encode
 
 export code_dispatch, intentof
@@ -10,33 +9,8 @@ export code_dispatch, intentof
 const PNode = PartialOrder.Node
 
 
-# ---- Method Interface -------------------------------------------------------
-import Base.>=, Base.&
-export Method, nomethod, MethodNode
-
-type Method
-    sig::Pattern
-    bindings::Vector{Node}
-    body::Union(Function,Nothing)
-    body_ex
-    hullT::Tuple
-    id::Int
-
-    function Method(sig::Pattern, bs, body, body_ex)
-        new(sig, bs, body, body_ex, julia_signature_of(sig))
-    end
-end
-
-const nomethod = Method(Pattern(anything), Node[], nothing, nothing)
-
->=(x::Method, y::Method) = x.sig.intent >= y.sig.intent
-#==(x::Method, y::Method) = x.sig.intent == y.sig.intent
-(&)(m::Method,  i::Intension) = m.sig.intent & i
-
-domainof(m::Method) = m.sig.intent
-
-typealias MethodNode PartialOrder.Node{Method}
-domainof(m::MethodNode) = m.value.sig.intent
+domainof(method) = error("unimplemented!")
+make_namer(methods::Vector) = error("unimplemented!")
 
 
 
@@ -112,18 +86,6 @@ end
 
 
 # ---- seq_dispatch!: sequence decision tree ----------------------------------
-
-function make_namer(methods::Vector{Method})
-    (node::Node)->begin        
-        for method in methods
-            rb = method.sig.rev_bindings
-            if has(rb, node)
-                return symbol(string(rb[node], '_', method.id))
-            end
-        end
-        nothing
-    end
-end
 
 seq_dispatch!(results::ResultsDict, d::DNode) = nothing
 function seq_dispatch!(results::ResultsDict, m::MethodCall)

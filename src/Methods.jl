@@ -5,6 +5,49 @@ import Nodes
 using Meta, PartialOrder, Patterns, DecisionTree, Encode
 export MethodTable, Method, methodsof, show_dispatch
 
+# ---- Method Interface -------------------------------------------------------
+import Base.>=, Base.&
+import DecisionTree.domainof, DecisionTree.make_namer
+export Method, nomethod, MethodNode
+
+type Method
+    sig::Pattern
+    bindings::Vector{Node}
+    body::Union(Function,Nothing)
+    body_ex
+    hullT::Tuple
+    id::Int
+
+    function Method(sig::Pattern, bs, body, body_ex)
+        new(sig, bs, body, body_ex, Nodes.julia_signature_of(sig))
+    end
+end
+
+const nomethod = Method(Pattern(anything), Node[], nothing, nothing)
+
+>=(x::Method, y::Method) = x.sig.intent >= y.sig.intent
+#==(x::Method, y::Method) = x.sig.intent == y.sig.intent
+(&)(m::Method,  i::Intension) = m.sig.intent & i
+
+domainof(m::Method) = m.sig.intent
+
+function make_namer(methods::Vector{Method})
+    (node::Node)->begin        
+        for method in methods
+            rb = method.sig.rev_bindings
+            if has(rb, node)
+                return symbol(string(rb[node], '_', method.id))
+            end
+        end
+        nothing
+    end
+end
+
+typealias MethodNode PartialOrder.Node{Method}
+
+
+# ---- MethodTable ------------------------------------------------------------
+
 type MethodTable
     name::Symbol
     top::MethodNode
