@@ -7,6 +7,8 @@ using Meta, PartialOrder, Patterns, Encode
 
 export code_dispatch, intentof
 
+const PNode = PartialOrder.Node
+
 
 # ---- Method Interface -------------------------------------------------------
 import Base.>=, Base.&
@@ -40,32 +42,35 @@ domainof(m::MethodNode) = m.value.sig.intent
 
 # ---- Decision Tree ----------------------------------------------------------
 
-abstract DNode
+abstract DNode{M}
 
-type Decision <: DNode
+type Decision{M} <: DNode{M}
     domain
     pass
     fail
-    methods::Vector{Method}
+    methods::Vector{M}
     pre::Vector{Node}
     seq::Vector{Node}
 
     Decision(domain, pass, fail, ms) = new(domain, pass, fail, ms)
 end
+Decision{M}(dom, pass, fail, ms::Vector{M}) = Decision{M}(dom, pass, fail, ms)
 
-type MethodCall <: DNode
-    m::Method
+type MethodCall{M} <: DNode{M}
+    m::M
     bind_seq::Vector
     bindings::Vector{Node}
 
-    MethodCall(m::Method) = new(m)
+    MethodCall(m::M) = new(m)
 end
+MethodCall{M}(m::M) = MethodCall{M}(m)
+
 
 type NoMethodNode <: DNode; end
 const nomethodnode = NoMethodNode()
 
-code_dispatch(top::MethodNode) = code_dispatch(top, ResultsDict())
-function code_dispatch(top::MethodNode, pre_results::ResultsDict)
+code_dispatch{M}(top::PNode{M}) = code_dispatch(top, ResultsDict())
+function code_dispatch{M}(top::PNode{M}, pre_results::ResultsDict)
     dtree = build_dtree(top, subDAGof(top))
 
     seq_dispatch!(pre_results, dtree)
@@ -74,7 +79,7 @@ end
 
 # ---- create decision tree ---------------------------------------------------
 
-function choose_pivot(top::MethodNode, ms::Set{MethodNode})
+function choose_pivot{M}(top::PNode{M}, ms::Set{PNode{M}})
     nmethods = length(ms)
     p_opt = nothing
     n_opt = nmethods+1
@@ -87,10 +92,10 @@ function choose_pivot(top::MethodNode, ms::Set{MethodNode})
             p_opt, n_opt = pivot, n
         end
     end
-    p_opt::MethodNode
+    p_opt::PNode{M}
 end
 
-function build_dtree(top::MethodNode, ms::Set{MethodNode})
+function build_dtree{M}(top::PNode{M}, ms::Set{PNode{M}})
     if isempty(top.gt) || length(ms) == 1
         top.value.body === nothing ? nomethodnode : MethodCall(top.value)
     else        
@@ -99,8 +104,8 @@ function build_dtree(top::MethodNode, ms::Set{MethodNode})
         pass = build_dtree(pivot, ms & below)
         fail = build_dtree(top,   ms - below)
 
-        methods = [node.value for node in filter(node->has(ms, node), 
-                                                 ordered_subDAGof(top))]
+        methods = M[node.value for node in filter(node->has(ms, node), 
+                                                  ordered_subDAGof(top))]
         Decision(domainof(pivot.value), pass, fail, methods)
     end    
 end
