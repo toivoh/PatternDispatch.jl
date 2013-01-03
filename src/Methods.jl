@@ -4,9 +4,9 @@ import Base.add, Base.>=, Base.&
 import Dispatch.domainof, Dispatch.signatureof, Dispatch.make_namer
 import Dispatch.is_empty_domain, Dispatch.hullof
 import Nodes
-using Meta, PartialOrder, Patterns, Dispatch, Encode
+using Meta, PartialOrder, Patterns, Dispatch, Encode, Recode
 
-export MethodTable, Method, show_dispatch
+export @pattern, show_dispatch
 
 
 # ---- Method -----------------------------------------------------------------
@@ -161,6 +161,63 @@ function show_dispatch(io::IO, mt::MethodTable, Ts::Tuple)
         if f_Ts <: Ts
             Base.show_unquoted(io, subs_ex(subs_invocation, fdef))
             print(io, "\n\n")
+        end
+    end
+end
+
+
+# ---- @pattern etc. ----------------------------------------------------------
+
+const method_tables = Dict{Function, MethodTable}()
+
+function show_dispatch(f::Function, args...)
+    if !has(method_tables, f);  error("not a pattern function: $f")  end
+    show_dispatch(method_tables[f], args...)
+end
+
+macro pattern(ex)
+    code_pattern(ex)
+end
+function code_pattern(ex)
+    sig, body = try
+        split_fdef(ex)
+    catch e
+        error("@pattern: not a function definition ($e)")
+    end
+    @expect is_expr(sig, :call)
+    fname, args = sig.args[1], sig.args[2:end]
+    if is_expr(fname, :curly)
+        error("@pattern: type parameters are not implemented")
+    end
+    psig = :($(args...),)
+    p_ex, bodyargs = recode(psig)
+    
+    f = esc(fname::Symbol)
+    quote       
+        local p = $p_ex
+        local bindings = Node[p.bindings[name] for name in $(quot(bodyargs))]
+        local bodyfun = $(esc(:(($(bodyargs...),)->$body)))
+        local method = Method(p, bindings, bodyfun, $(quot(body)))
+
+        local wasbound = try
+            f = $f
+            true
+        catch e
+            false
+        end
+
+        local mt
+        if !wasbound
+            mt = MethodTable($(quot(fname)))
+            local const f = mt.f
+            const $f = (args...)->f(args...)
+            method_tables[$f] = mt
+            add(mt, method)
+        else
+            if !has(method_tables, $f)
+                error($("$fname is not a pattern function"))
+            end
+            add(method_tables[$f], method)
         end
     end
 end
