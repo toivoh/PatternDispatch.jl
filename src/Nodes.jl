@@ -3,7 +3,7 @@ module Nodes
 import Base.&, Base.isequal, Base.>=, Base.>, Base.<=, Base.<, Base.show
 import Patterns.depsof, Patterns.subs, Patterns.intension
 using Meta, Immutable, Patterns
-export argsym, argnode, never, always, tupref, lengthnode, egalpred, typepred
+export argsym, argnode, never, always, refnode, lengthnode, egalpred, typepred
 export julia_signature_of
 
 
@@ -13,12 +13,12 @@ type Arg    <: Node{Any}; end
 const argnode = Arg()
 const argsym  = gensym("arg")
 
-@immutable type TupleRef <: Node{Any};  arg::Node; index::Int;  end
-@immutable type Length   <: Node{Any};  arg::Node;              end
-@immutable type Egal     <: Predicate;  arg::Node; value;       end
-@immutable type Isa      <: Predicate;  arg::Node; typ;         end
+@immutable type Ref    <: Node{Any};  arg::Node; index::Int;  end
+@immutable type Length <: Node{Any};  arg::Node;              end
+@immutable type Egal   <: Predicate;  arg::Node; value;       end
+@immutable type Isa    <: Predicate;  arg::Node; typ;         end
 
-tupref(    arg::Node, index::Int) = TupleRef(arg, index)
+refnode(   arg::Node, index::Int) = Ref(arg, index)
 lengthnode(arg::Node)             = Length(arg)
 egalpred(  arg::Node, value)      = Egal(arg, value)
 
@@ -27,16 +27,16 @@ typepred(arg::Node, ::Type{None}) = never
 typepred(arg::Node, typ) = Isa(arg, typ)
 
 subs(d::Dict, node::Union(Arg, Never, Always)) = node
-subs(d::Dict, node::TupleRef) = TupleRef(d[node.arg], node.index)
-subs(d::Dict, node::Length)   = Length(  d[node.arg])
-subs(d::Dict, node::Egal)     = Egal(    d[node.arg], node.value)
-subs(d::Dict, node::Isa)      = Isa(     d[node.arg], node.typ)
+subs(d::Dict, node::Ref)    = Ref(d[node.arg], node.index)
+subs(d::Dict, node::Length) = Length(  d[node.arg])
+subs(d::Dict, node::Egal)   = Egal(    d[node.arg], node.value)
+subs(d::Dict, node::Isa)    = Isa(     d[node.arg], node.typ)
 
-encode(v::Arg)      = argsym
-encode(v::TupleRef) = :( $(resultof(v.arg))[$(v.index)] )
-encode(v::Length)   = :(length($(resultof(v.arg))))
-encode(g::Egal)     = :(is( $(resultof(g.arg)), $(quot(g.value))))
-encode(g::Isa)      = :(isa($(resultof(g.arg)), $(quot(g.typ  ))))
+encode(v::Arg)    = argsym
+encode(v::Ref)    = :( $(resultof(v.arg))[$(v.index)] )
+encode(v::Length) = :(length($(resultof(v.arg))))
+encode(g::Egal)   = :(is( $(resultof(g.arg)), $(quot(g.value))))
+encode(g::Isa)    = :(isa($(resultof(g.arg)), $(quot(g.typ  ))))
 
 # (&)(::Never,     ::Never) = never
 # (&)(::Predicate, ::Never) = never
@@ -52,9 +52,9 @@ samearg(n::Node, m::Node) = @assert n.arg===m.arg
 (&)(s::Isa, t::Isa) = (samearg(s,t); typepred(s.arg, tintersect(s.typ,t.typ)))
 
 depsof(node::Union(Arg, Never, Always))  = []
-depsof(node::Union(TupleRef, Length, Egal, Isa)) = [node.arg]
+depsof(node::Union(Ref, Length, Egal, Isa)) = [node.arg]
 
-function depsof(i::Intension, n::TupleRef)
+function depsof(i::Intension, n::Ref)
     Node[n.arg, Guard(i.factors[n.arg]), Guard(i.factors[Length(n.arg)])]
 end
 depsof(i::Intension, node::Length) = Node[node.arg, Guard(i.factors[node.arg])]
@@ -62,7 +62,7 @@ depsof(i::Intension, node::Length) = Node[node.arg, Guard(i.factors[node.arg])]
 function intension(Ts::Tuple)
     intension(typepred(argnode, Tuple),
               egalpred(lengthnode(argnode), length(Ts)),
-              {typepred(tupref(argnode, k),T) for (k,T) in enumerate(Ts)}...)
+              {typepred(refnode(argnode, k),T) for (k,T) in enumerate(Ts)}...)
 end
 
 get_type(g::Isa)  = g.typ
@@ -76,7 +76,7 @@ function julia_signature_of(intent::Intension)
     @assert garg.typ <: Tuple
     glen::Egal = intent.factors[Length(argnode)]
     nargs = glen.value
-    tuple({get_type(intent, tupref(argnode, k)) for k=1:nargs}...)
+    tuple({get_type(intent, refnode(argnode, k)) for k=1:nargs}...)
 end
 julia_signature_of(p::Pattern) = julia_signature_of(p.intent)
 
@@ -97,15 +97,15 @@ function adduser(users::Dict, user, dep::Node)
     add(users[dep], user)
 end
 
-const typeorder = [Symbol=>1, Length=>2, TupleRef=>3, Egal=>4, Isa=>4]
+const typeorder = [Symbol=>1, Length=>2, Ref=>3, Egal=>4, Isa=>4]
 cmp(x,y) = typeorder[typeof(x)] < typeorder[typeof(y)]
-cmp(x::Symbol,   y::Symbol)   = string(x) < string(y)
-cmp(x::TupleRef, y::TupleRef) = x.index   < y.index
+cmp(x::Symbol, y::Symbol) = string(x) < string(y)
+cmp(x::Ref,    y::Ref)    = x.index   < y.index
 
 function showpat(io::IO, users::Dict, node::Node)
     if !has(users, node); print("::Any"); return end
 
-    # printing order: Symbol, TupleRef, Egal, Isa
+    # printing order: Symbol, Ref, Egal, Isa
     us = sort(cmp, {users[node]...})
     k, n = 1, length(us)
     printed = false
@@ -117,10 +117,10 @@ function showpat(io::IO, users::Dict, node::Node)
         elseif isa(u, Egal); print(io, u.value); printed = true
         elseif isa(u, Isa); print(io, "::", u.typ); printed = true
         elseif isa(u, Length) # todo: do something
-        elseif isa(u, TupleRef)
+        elseif isa(u, Ref)
             print(io, '(')
             i = 0
-            while k <= n && isa(us[k], TupleRef)
+            while k <= n && isa(us[k], Ref)
                 if i==0; i=1; end
                 u = us[k]
                 @assert i <= u.index

@@ -68,7 +68,7 @@ function seq_dispatch!(d::DNode, methods, hullT::Tuple)
 
     argsyms = {}
     for k=1:length(hullT)
-        node, name = Nodes.tupref(Nodes.argnode, k), nothing
+        node, name = Nodes.refnode(Nodes.argnode, k), nothing
         for method in methods
             rb = method.sig.rev_bindings
             if has(rb, node)
