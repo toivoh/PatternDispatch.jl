@@ -4,6 +4,7 @@ using Meta, PartialOrder
 
 export DNode, Decision, MethodCall, NoMethodNode, build_dtree
 export domainof, make_namer
+export build_dtree
 
 import Patterns
 const INode = Patterns.Node # todo: remove!
@@ -61,6 +62,7 @@ function choose_pivot{M}(top::Node{M}, ms::Set{Node{M}})
     p_opt::Node{M}
 end
 
+build_dtree(top::Node) = build_dtree(top, subDAGof(top))
 function build_dtree{M}(top::Node{M}, ms::Set{Node{M}})
     if isempty(top.gt) || length(ms) == 1
         top.value.body === nothing ? nomethodnode : MethodCall(top.value)

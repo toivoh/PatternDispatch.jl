@@ -3,19 +3,7 @@ module DecisionTree
 import Base.==
 using Meta, PartialOrder, Patterns, Encode, Dispatch
 
-export code_dispatch, intentof
-
-
-import PartialOrder
-const PNode = PartialOrder.Node # todo: remove
-
-code_dispatch{M}(top::PNode{M}) = code_dispatch(top, ResultsDict())
-function code_dispatch{M}(top::PNode{M}, pre_results::ResultsDict)
-    dtree = build_dtree(top, subDAGof(top))
-
-    seq_dispatch!(pre_results, dtree)
-    code = code_dispatch(dtree)
-end
+export code_dispatch, seq_dispatch!
 
 
 # ---- seq_dispatch!: sequence decision tree ----------------------------------

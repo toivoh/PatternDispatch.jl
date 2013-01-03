@@ -2,7 +2,7 @@
 module Methods
 import Base.add
 import Nodes
-using Meta, PartialOrder, Patterns, DecisionTree, Encode
+using Meta, PartialOrder, Patterns, Dispatch, DecisionTree, Encode
 export MethodTable, Method, methodsof, show_dispatch
 
 # ---- Method Interface -------------------------------------------------------
@@ -174,6 +174,8 @@ function create_dispatch(mt::MethodTable, methods::Vector{Method},hullT::Tuple)
     hull = intension(hullT)
     top = simplify!(top, hull)
 
+    dtree = build_dtree(top)
+
 #     @show hullT
 #     @show tuple([node.value.sig for node in subDAGof(top)]...)
 #     @show top.value.sig
@@ -205,7 +207,10 @@ function create_dispatch(mt::MethodTable, methods::Vector{Method},hullT::Tuple)
 #         provide!(results, Nodes.tupref(Nodes.argnode, k), argsym)
 #     end
 
-    code = code_dispatch(top, results)
+    seq_dispatch!(results, dtree)
+    code = code_dispatch(dtree)
+
+
     args = {:($argsym::$(quot(T))) for (argsym,T) in zip(argsyms,hullT)}    
     fdef = expr(:function, :( $(mt.name)($(args...)) ), code)
 #   mt.julia_methods[hullT] = expr(:function, :( $(mt.name)($(args...)) ),code)
