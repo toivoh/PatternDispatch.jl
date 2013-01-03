@@ -108,35 +108,13 @@ function compile!(mt::MethodTable)
     end
 end
 
-function compile!(mt::MethodTable, methods::Vector{Method},hullT::Tuple)
-    hull = intension(hullT)
-    top = simplify(mt.top, hull)
+function compile!(mt::MethodTable, methods::Vector{Method}, hullT::Tuple)
+    hull  = intension(hullT)
+    top   = simplify(mt.top, hull)
     dtree = build_dtree(top)
     
-    # create dispatch code using given assumptions and args
-    # todo: Move results manipulation into Encode
-    results = ResultsDict()
-    for pred in predsof(hull);  preguard!(results, Guard(pred));  end
-
-    argsyms = {}
-    for k=1:length(hullT)
-        node, name = Nodes.tupref(Nodes.argnode, k), nothing
-        for method in methods
-            rb = method.sig.rev_bindings
-            if has(rb, node)
-                name = symbol(string(rb[node], '_', method.id))
-                break
-            end
-        end
-        if name === nothing;  name = symbol("arg$k");  end
-        
-        push(argsyms, name)
-        provide!(results, node, name)
-    end
-    
-    seq_dispatch!(results, dtree)
-    code = code_dispatch(dtree)
-
+    argsyms = seq_dispatch!(dtree, methods, hullT)
+    code    = code_dispatch(dtree)
 
     args = {:($argsym::$(quot(T))) for (argsym,T) in zip(argsyms,hullT)}    
     fdef = expr(:function, :( $(mt.name)($(args...)) ), code)

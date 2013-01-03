@@ -1,9 +1,9 @@
 
 module Encode
 using Meta, Patterns, Dispatch
+import Nodes
 import Patterns.resultof, Nodes.encode
-export ResultsDict, Sequence, sequence!, code_predicate, encoded
-export preguard!, provide!
+
 export code_dispatch, seq_dispatch!
 
 
@@ -60,6 +60,31 @@ function provide!(results::ResultsDict, node::Node, ex)
 end
 
 # ---- sequence decision tree -------------------------------------------------
+
+function seq_dispatch!(d::DNode, methods, hullT::Tuple)
+    # todo: extract methods from d instead
+    results = ResultsDict()
+    for pred in predsof(intension(hullT)); preguard!(results, Guard(pred)); end
+
+    argsyms = {}
+    for k=1:length(hullT)
+        node, name = Nodes.tupref(Nodes.argnode, k), nothing
+        for method in methods
+            rb = method.sig.rev_bindings
+            if has(rb, node)
+                name = symbol(string(rb[node], '_', method.id))
+                break
+            end
+        end
+        if name === nothing;  name = symbol("arg$k");  end
+        
+        push(argsyms, name)
+        provide!(results, node, name)
+    end
+
+    seq_dispatch!(results, d)    
+    argsyms
+end
 
 seq_dispatch!(results::ResultsDict, d::DNode) = nothing
 function seq_dispatch!(results::ResultsDict, m::MethodCall)
