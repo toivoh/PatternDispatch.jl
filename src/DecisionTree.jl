@@ -1,47 +1,13 @@
 
 module DecisionTree
 import Base.==
-import PartialOrder
-using Meta, PartialOrder, Patterns, Encode
+using Meta, PartialOrder, Patterns, Encode, Dispatch
 
 export code_dispatch, intentof
 
-const PNode = PartialOrder.Node
 
-
-domainof(method) = error("unimplemented!")
-make_namer(methods::Vector) = error("unimplemented!")
-
-
-
-# ---- Decision Tree ----------------------------------------------------------
-
-abstract DNode{M}
-
-type Decision{M} <: DNode{M}
-    domain
-    pass
-    fail
-    methods::Vector{M}
-    pre::Vector{Node}
-    seq::Vector{Node}
-
-    Decision(domain, pass, fail, ms) = new(domain, pass, fail, ms)
-end
-Decision{M}(dom, pass, fail, ms::Vector{M}) = Decision{M}(dom, pass, fail, ms)
-
-type MethodCall{M} <: DNode{M}
-    m::M
-    bind_seq::Vector
-    bindings::Vector{Node}
-
-    MethodCall(m::M) = new(m)
-end
-MethodCall{M}(m::M) = MethodCall{M}(m)
-
-
-type NoMethodNode <: DNode; end
-const nomethodnode = NoMethodNode()
+import PartialOrder
+const PNode = PartialOrder.Node # todo: remove
 
 code_dispatch{M}(top::PNode{M}) = code_dispatch(top, ResultsDict())
 function code_dispatch{M}(top::PNode{M}, pre_results::ResultsDict)
@@ -49,39 +15,6 @@ function code_dispatch{M}(top::PNode{M}, pre_results::ResultsDict)
 
     seq_dispatch!(pre_results, dtree)
     code = code_dispatch(dtree)
-end
-
-# ---- create decision tree ---------------------------------------------------
-
-function choose_pivot{M}(top::PNode{M}, ms::Set{PNode{M}})
-    nmethods = length(ms)
-    p_opt = nothing
-    n_opt = nmethods+1
-    for pivot in top.gt & ms
-        below = ms & subDAGof(pivot)
-        npass = length(below)
-        nfail = nmethods - npass
-        n = max(npass, nfail)
-        if n < n_opt
-            p_opt, n_opt = pivot, n
-        end
-    end
-    p_opt::PNode{M}
-end
-
-function build_dtree{M}(top::PNode{M}, ms::Set{PNode{M}})
-    if isempty(top.gt) || length(ms) == 1
-        top.value.body === nothing ? nomethodnode : MethodCall(top.value)
-    else        
-        pivot = choose_pivot(top, ms)
-        below = subDAGof(pivot)
-        pass = build_dtree(pivot, ms & below)
-        fail = build_dtree(top,   ms - below)
-
-        methods = M[node.value for node in filter(node->has(ms, node), 
-                                                  ordered_subDAGof(top))]
-        Decision(domainof(pivot.value), pass, fail, methods)
-    end    
 end
 
 
