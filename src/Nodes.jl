@@ -3,7 +3,7 @@ module Nodes
 import Base.&, Base.isequal, Base.>=, Base.>, Base.<=, Base.<, Base.show
 import Patterns.depsof, Patterns.subs, Patterns.intension
 using Meta, Immutable, Patterns
-export argsym, argnode, never, always, tupref, egalpred, typepred
+export argsym, argnode, never, always, tupref, lengthnode, egalpred, typepred
 export julia_signature_of
 
 
@@ -14,11 +14,13 @@ const argnode = Arg()
 const argsym  = gensym("arg")
 
 @immutable type TupleRef <: Node{Any};  arg::Node; index::Int;  end
+@immutable type Length   <: Node{Any};  arg::Node;              end
 @immutable type Egal     <: Predicate;  arg::Node; value;       end
 @immutable type Isa      <: Predicate;  arg::Node; typ;         end
 
-tupref(  arg::Node, index::Int) = TupleRef(arg, index)
-egalpred(arg::Node, value)      = Egal(arg, value)
+tupref(    arg::Node, index::Int) = TupleRef(arg, index)
+lengthnode(arg::Node)             = Length(arg)
+egalpred(  arg::Node, value)      = Egal(arg, value)
 
 typepred(arg::Node, ::Type{Any})  = always
 typepred(arg::Node, ::Type{None}) = never
@@ -26,11 +28,13 @@ typepred(arg::Node, typ) = Isa(arg, typ)
 
 subs(d::Dict, node::Union(Arg, Never, Always)) = node
 subs(d::Dict, node::TupleRef) = TupleRef(d[node.arg], node.index)
+subs(d::Dict, node::Length)   = Length(  d[node.arg])
 subs(d::Dict, node::Egal)     = Egal(    d[node.arg], node.value)
 subs(d::Dict, node::Isa)      = Isa(     d[node.arg], node.typ)
 
 encode(v::Arg)      = argsym
 encode(v::TupleRef) = :( $(resultof(v.arg))[$(v.index)] )
+encode(v::Length)   = :(length($(resultof(v.arg))))
 encode(g::Egal)     = :(is( $(resultof(g.arg)), $(quot(g.value))))
 encode(g::Isa)      = :(isa($(resultof(g.arg)), $(quot(g.typ  ))))
 
@@ -48,7 +52,7 @@ samearg(n::Node, m::Node) = @assert n.arg===m.arg
 (&)(s::Isa, t::Isa) = (samearg(s,t); typepred(s.arg, tintersect(s.typ,t.typ)))
 
 depsof(node::Union(Arg, Never, Always))  = []
-depsof(node::Union(TupleRef, Egal, Isa)) = [node.arg]
+depsof(node::Union(TupleRef, Length, Egal, Isa)) = [node.arg]
 
 depsof(i::Intension,node::TupleRef) = Node[node.arg,Guard(i.factors[node.arg])]
 
