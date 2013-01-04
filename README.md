@@ -75,34 +75,43 @@ the set of dispatch methods printed,
 e.g. `show_dispatch(f, (Int,))` prints only the second method, since the first 
 one can never be triggered with an argument of type `Int`.
 
-Signatures can also contain patterns of tuples:
+Signatures can also contain patterns of tuples and vectors:
 
     @pattern f2((x,y::Int)) = x*y
+    @pattern f2([x,y::Int]) = x/y
     @pattern f2(x)          = nothing
 
     ==> f2((2,5)) = 10
         f2((4,3)) = 12
-        f2((4,'a') = f2(1) = f2("hello") = f2((1,)) = f2((1,2,3)) = nothing
+	f2([4,3]) = 1.3333333333333333
+        f2((4,'a')) = f2({4,'a'}) = f2(1) = f2("hello") = f2((1,)) = f2((1,2,3)) = nothing
+
+A vector pattern will match any value `::Vector`. To restrict to a given
+subtype, use e.g.
+
+    @pattern f([x,y]::Vector{Int}) = ...
+
+Two patterns `p` and `q` can be unified using `p~q`, 
+e.g. `p~q` matches a value only if it matches both the pattern `p` 
+and the pattern `q`.
+This can also be used to e.g. get at the actual vector that matched a vector pattern:
+
+    @pattern f3(v~[x::Int, y::Int]) = {v,x*y}
+
+    ==> f3([3,2])   = {[3, 2], 6}
+        f3({3,2})   = {{3, 2}, 6}
+        f3([3,2.0]) = nothing
 
 Symbols in signatures are replaced by pattern variables by default
 (symbols in the position of function names and at the right hand side of `::`
 are not). To use the _value_ of a variabe at the point of method definition,
 it can be interpolated into the method signature:
 
-    @pattern f3($nothing) = 1
-    @pattern f3(x)        = 2
+    @pattern f4($nothing) = 1
+    @pattern f4(x)        = 2
 
-    ==> f3(nothing) = 1
-        f3(1) = f3(:x) = f3("hello") = 2
-
-Two patterns `p` and `q` can be unified using `p~q`, 
-e.g. `p~q` matches a value only if it matches both the pattern `p` 
-and the pattern `q`.
-This can also be used to name parts of a pattern:
-
-    @pattern f4(t~(x,y)) = {t,x,y}
-
-    ==> f4((1,2)) = {(1,2), 1, 2}
+    ==> f4(nothing) = 1
+        f4(1) = f4(:x) = f4("hello") = 2
 
 A warning is printed if a new definition makes dispatch ambiguous:
 
