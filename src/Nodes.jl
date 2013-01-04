@@ -45,11 +45,15 @@ encode(g::Isa)    = :(isa($(resultof(g.arg)), $(quot(g.typ  ))))
 (&)(node::Predicate, ::Always) = node
 (&)(::Always, node::Predicate) = node
 
+# to work around that type equivalence is weaker than isequal
+# works together with >=(::Intension, ::Intension)
+mytintersect(S,T) = (T <: S) ? T : tintersect(S,T)
+
 samearg(n::Node, m::Node) = @assert n.arg===m.arg
 (&)(e::Egal, f::Egal) = (samearg(e, f); e.value === f.value ? e : never)
 (&)(e::Egal, t::Isa)  = (samearg(e, t); isa(e.value, t.typ) ? e : never)
 (&)(t::Isa,  e::Egal) = e & t
-(&)(s::Isa, t::Isa) = (samearg(s,t); typepred(s.arg, tintersect(s.typ,t.typ)))
+(&)(s::Isa, t::Isa) = (samearg(s,t); typepred(s.arg,mytintersect(s.typ,t.typ)))
 
 depsof(node::Union(Arg, Never, Always))  = []
 depsof(node::Union(Ref, Length, Egal, Isa)) = [node.arg]

@@ -1,6 +1,6 @@
 
 module Patterns
-import Base.&, Base.isequal, Base.>=, Base.>, Base.<=, Base.<
+import Base.&, Base.isequal, Base.>=, Base.>, Base.<=, Base.<, Base.==
 using Immutable
 
 export Node, Predicate, Guard, Never, Always, never, always
@@ -58,10 +58,14 @@ end
 (&)(x::Intension, y::Intension) = intension(predsof(x)..., predsof(y)...)
 isequal(x::Intension, y::Intension) = isequal(x.factors, y.factors)
 
->=(x::Intension, y::Intension) = (x & y) == y
->( x::Intension, y::Intension) = (x >= y) && (x != y)
+# works around that type equivalence is weaker than isequal
+# works together with (&)(::Isa, ::Isa)
+>=(x::Intension, y::Intension) = isequal(x & y, y)     # (x & y) == y
+>( x::Intension, y::Intension) = (x >= y) && !(y >= x) # (x >= y) && (x != y)
+==(x::Intension, y::Intension) = (x >= y) && (y >= x)
 <=(x::Intension, y::Intension) = y >= x
 <( x::Intension, y::Intension) = y >  x
+
 
 
 # ---- Pattern ----------------------------------------------------------------
