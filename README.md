@@ -91,7 +91,8 @@ element type, use e.g.
 
     @pattern f([x,y]::Vector{Int}) = ...
 
-The pattern `p~q` matches a value if and only if both patterns `p` and `q` do.
+The pattern `p~q` matches a value if and only if 
+it matches both patterns `p` and `q`.
 This can be used e.g. to get at the actual vector that matched a vector pattern:
 
     @pattern f3(v~[x::Int, y::Int]) = {v,x*y}
