@@ -83,18 +83,16 @@ Signatures can also contain patterns of tuples and vectors:
 
     ==> f2((2,5)) = 10
         f2((4,3)) = 12
-	f2([4,3]) = 1.3333333333333333
+        f2([4,3]) = 1.3333333333333333
         f2((4,'a')) = f2({4,'a'}) = f2(1) = f2("hello") = f2((1,)) = f2((1,2,3)) = nothing
 
-A vector pattern will match any value `::Vector`. To restrict to a given
-subtype, use e.g.
+A vector pattern will match any `Vector`. To restrict to a given
+element type, use e.g.
 
     @pattern f([x,y]::Vector{Int}) = ...
 
-Two patterns `p` and `q` can be unified using `p~q`, 
-e.g. `p~q` matches a value only if it matches both the pattern `p` 
-and the pattern `q`.
-This can also be used to e.g. get at the actual vector that matched a vector pattern:
+The pattern `p~q` matches a value if and only if both patterns `p` and `q` do.
+This can be used e.g. to get at the actual vector that matched a vector pattern:
 
     @pattern f3(v~[x::Int, y::Int]) = {v,x*y}
 
