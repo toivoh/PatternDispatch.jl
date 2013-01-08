@@ -9,7 +9,7 @@ export julia_signature_of
 
 # ---- nodes ------------------------------------------------------------------
 
-type Arg    <: Node{Any}; end
+type Arg <: Node{Any}; end
 const argnode = Arg()
 const argsym  = gensym("arg")
 
@@ -24,13 +24,13 @@ egalpred(  arg::Node, value)      = Egal(arg, value)
 
 typepred(arg::Node, ::Type{Any})  = always
 typepred(arg::Node, ::Type{None}) = never
-typepred(arg::Node, typ) = Isa(arg, typ)
+typepred(arg::Node, typ)          = Isa(arg, typ)
 
 subs(d::Dict, node::Union(Arg, Never, Always)) = node
-subs(d::Dict, node::Ref)    = Ref(d[node.arg], node.index)
-subs(d::Dict, node::Length) = Length(  d[node.arg])
-subs(d::Dict, node::Egal)   = Egal(    d[node.arg], node.value)
-subs(d::Dict, node::Isa)    = Isa(     d[node.arg], node.typ)
+subs(d::Dict, node::Ref)    = Ref(   d[node.arg], node.index)
+subs(d::Dict, node::Length) = Length(d[node.arg])
+subs(d::Dict, node::Egal)   = Egal(  d[node.arg], node.value)
+subs(d::Dict, node::Isa)    = Isa(   d[node.arg], node.typ)
 
 encode(v::Arg)    = argsym
 encode(v::Ref)    = :( $(resultof(v.arg))[$(v.index)] )
@@ -55,7 +55,7 @@ samearg(n::Node, m::Node) = @assert n.arg===m.arg
 (&)(t::Isa,  e::Egal) = e & t
 (&)(s::Isa, t::Isa) = (samearg(s,t); typepred(s.arg,mytintersect(s.typ,t.typ)))
 
-depsof(node::Union(Arg, Never, Always))  = []
+depsof(node::Union(Arg, Never, Always))     = []
 depsof(node::Union(Ref, Length, Egal, Isa)) = [node.arg]
 
 function depsof(i::Intension, n::Ref)

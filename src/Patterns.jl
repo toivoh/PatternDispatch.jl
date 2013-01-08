@@ -23,7 +23,7 @@ const always  = Always()
 @immutable type Guard <: Node{None}
     pred::Predicate
 end
-subs(d::Dict, node::Guard)    = Guard(   d[node.pred])
+subs(d::Dict, node::Guard) = Guard(d[node.pred])
 
 resultof(node::Node) = error("Undefined!")
 
