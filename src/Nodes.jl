@@ -105,7 +105,7 @@ cmp(x::Symbol, y::Symbol) = string(x) < string(y)
 cmp(x::Ref,    y::Ref)    = x.index   < y.index
 
 function showpat(io::IO, users::Dict, node::Node)
-    if !has(users, node); print("::Any"); return end
+    if !has(users, node); print(io, "::Any"); return end
 
     # printing order: Symbol, Ref, Egal, Isa
     us = sort(cmp, {users[node]...})
