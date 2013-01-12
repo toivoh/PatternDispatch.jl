@@ -9,7 +9,8 @@ end
 function code_immutable(ex)
     @expect is_expr(ex, :type, 2)
     sig, body = ex.args    
-    typename = (is_expr(sig, :(<:), 2) ? sig.args[1] : sig)::Symbol 
+    typeex = (is_expr(sig, :(<:), 2) ? sig.args[1] : sig)
+    typename = (is_expr(typeex, :curly) ? typeex.args[1] : typeex)::Symbol
     fields, types, sigs = Symbol[], {}, {}
     for arg in body.args
         if isa(arg, Symbol)

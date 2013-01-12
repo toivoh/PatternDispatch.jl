@@ -3,7 +3,7 @@ module Patterns
 import Base.&, Base.isequal, Base.>=, Base.>, Base.<=, Base.<, Base.==
 using Immutable
 
-export Node, Predicate, Guard, never, always
+export Node, Predicate, Atom, Guard, never, always
 export depsof
 export Intension, intension, naught, anything
 export encode, predsof, depsof, subs, resultof
@@ -20,6 +20,8 @@ typealias Predicate Node{Bool}
 end
 Atom{T}(value::T) = Atom{T}(value)
 
+depsof(node::Atom) = []
+
 const never  = Atom(false)
 const always = Atom(true)
 
@@ -35,9 +37,9 @@ resultof(node::Node) = error("Undefined!")
        
 typealias UsersDict Dict{Node,Set{Node}}
 
-adduser!(us::UsersDict, u::Node) = for d in depsof(u); adduser(users, u,d); end
+adduser!(us::UsersDict, u::Node) = for d in depsof(u); adduser!(us, u, d); end
 function adduser!(users::UsersDict, user::Node, dep::Node)
-    if !has(users, dep); adduser!(users, dep); users[dep] = Set() end
+    if !has(users, dep); adduser!(users, dep); users[dep] = Set{Node}() end
     add(users[dep], user)
 end
 

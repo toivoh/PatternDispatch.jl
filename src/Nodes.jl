@@ -53,7 +53,7 @@ samearg(n::Node, m::Node) = @assert n.arg===m.arg
 (&)(t::Isa,  e::Egal) = e & t
 (&)(s::Isa, t::Isa) = (samearg(s,t); typepred(s.arg,mytintersect(s.typ,t.typ)))
 
-depsof(node::Union(Arg, Atom))     = []
+depsof(node::Arg) = []
 depsof(node::Union(Ref, Length, Egal, Isa)) = [node.arg]
 
 function depsof(i::Intension, n::Ref)
@@ -105,7 +105,7 @@ cmp(x::Symbol, y::Symbol) = string(x) < string(y)
 cmp(x::Ref,    y::Ref)    = x.index   < y.index
 
 function showpat(io::IO, users::Dict, node::Node)
-    if !has(users, node); print("::Any"); return end
+    if !has(users, node); print(io, "::Any"); return end
 
     # printing order: Symbol, Ref, Egal, Isa
     us = sort(cmp, {users[node]...})
