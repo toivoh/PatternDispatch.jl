@@ -85,46 +85,39 @@ julia_signature_of(p::Pattern) = julia_signature_of(p.intent)
 
 function show(io::IO, p::Pattern)
     if p.intent === naught; print(io, "::None"); return; end
-    
-    users = Dict{Node,Set}()
-    for (name,arg) in p.bindings; adduser(users, name, arg); end
-    for g in predsof(p.intent);  adduser(users, g);         end
+
+    users = copy(p.intent.users)
+    for arg in values(p.bindings);  Patterns.adduser!(users, arg)  end
 
     showpat(io, users, p.rev_bindings, argnode)
 end
-    
-adduser(users::Dict, u::Node) = for d in depsof(u); adduser(users, u, d); end
-function adduser(users::Dict, user, dep::Node)
-    if !has(users, dep); adduser(users, dep); users[dep] = Set() end
-    add(users[dep], user)
-end
 
-const typeorder = [Symbol=>1, Length=>2, Egal=>3, Isa=>3, Ref=>4]
+const typeorder = [Length=>2, Egal=>3, Isa=>3, Ref=>4]
 cmp(x,y) = typeorder[typeof(x)] < typeorder[typeof(y)]
-cmp(x::Symbol, y::Symbol) = string(x) < string(y)
-cmp(x::Ref,    y::Ref)    = x.index   < y.index
+cmp(x::Ref, y::Ref) = x.index < y.index
 
 function showpat(io::IO, users::Dict, rbind::Dict, node::Node)
-    if !has(users, node); print(io, "::Any"); return end
-
     # printing order: Symbol, Ref, Egal, Isa
+
+    printed = false
+    for name in get(rbind, node, ())
+        if printed;  print(io, '~')  end
+        print(io, name)
+        printed = true
+    end
+
+    if !has(users, node); 
+        if !printed;  print(io, "::Any")  end
+        return 
+    end
+
     us = sort(cmp, {users[node]...})
     k, n = 1, length(us)
-    printed = false
     typ = Any
-
-#     for name in get(rbind, node, ())
-#         if printed;  print(io, '~')  end
-#         print(io, name)
-#         printed = true
-#     end
-
     while k <= n
         u = us[k]
-#        if k > 1 && !isa(u, Isa); print(io, '~'); end
         if printed && !(isa(u, Isa) || isa(u, Length)); print(io, '~'); end
-        if isa(u, Symbol); print(io, u); printed = true
-        elseif isa(u, Egal); print(io, u.value); printed = true
+        if isa(u, Egal); print(io, u.value); printed = true
         elseif isa(u, Isa)
             typ = u.typ
             if k+1 <= n && isa(us[k+1], Ref)
