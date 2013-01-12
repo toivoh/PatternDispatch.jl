@@ -90,7 +90,7 @@ function show(io::IO, p::Pattern)
     for (name,arg) in p.bindings; adduser(users, name, arg); end
     for g in predsof(p.intent);  adduser(users, g);         end
 
-    showpat(io, users, argnode)
+    showpat(io, users, p.rev_bindings, argnode)
 end
     
 adduser(users::Dict, u::Node) = for d in depsof(u); adduser(users, u, d); end
@@ -104,7 +104,7 @@ cmp(x,y) = typeorder[typeof(x)] < typeorder[typeof(y)]
 cmp(x::Symbol, y::Symbol) = string(x) < string(y)
 cmp(x::Ref,    y::Ref)    = x.index   < y.index
 
-function showpat(io::IO, users::Dict, node::Node)
+function showpat(io::IO, users::Dict, rbind::Dict, node::Node)
     if !has(users, node); print(io, "::Any"); return end
 
     # printing order: Symbol, Ref, Egal, Isa
@@ -112,6 +112,13 @@ function showpat(io::IO, users::Dict, node::Node)
     k, n = 1, length(us)
     printed = false
     typ = Any
+
+#     for name in get(rbind, node, ())
+#         if printed;  print(io, '~')  end
+#         print(io, name)
+#         printed = true
+#     end
+
     while k <= n
         u = us[k]
 #        if k > 1 && !isa(u, Isa); print(io, '~'); end
@@ -138,7 +145,7 @@ function showpat(io::IO, users::Dict, node::Node)
                 @assert i <= u.index
                 while i < u.index; print(io, ", "); i += 1; end
                 i = u.index
-                showpat(io, users, u)
+                showpat(io, users, rbind, u)
                 k += 1
             end
             if i == 1; print(io, ','); end

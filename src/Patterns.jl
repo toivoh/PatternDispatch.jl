@@ -7,7 +7,7 @@ export Node, Predicate, Atom, Guard, never, always
 export depsof
 export Intension, intension, naught, anything
 export encode, predsof, depsof, subs, resultof
-export Pattern, suffix_bindings
+export Pattern, suffix_bindings, hasname, getname
 
 
 # ---- Node -------------------------------------------------------------------
@@ -94,14 +94,23 @@ isequal(x::Intension, y::Intension) = isequal(x.factors, y.factors)
 type Pattern
     intent::Intension
     bindings::Dict{Symbol,Node}
-    rev_bindings::Dict{Node,Symbol}
+    rev_bindings::Dict{Node,Set{Symbol}}
 
     function Pattern(intent::Intension, bindings::Dict{Symbol,Node})
-        rev = (Node=>Symbol)[node => name for (name,node) in bindings]
+        rev = Dict{Node,Set{Symbol}}()
+        for (name,node) in bindings
+            add(@get!(rev, node, Set{Symbol}()), name)
+        end
         new(intent, bindings, rev)
     end
 end
 Pattern(intent::Intension) = Pattern(intent, Dict{Symbol,Node}())
+
+firstitem(iter) = next(iter, start(iter))[1]
+
+hasname(p::Pattern, node::Node) = has(p.rev_bindings, node)
+# todo: pick a name more deterministically?
+getname(p::Pattern, node::Node) = firstitem(p.rev_bindings[node]) 
 
 function (&)(p::Pattern, q::Pattern)
     bindings = merge(p.bindings, q.bindings)

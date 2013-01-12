@@ -38,9 +38,8 @@ signatureof(m::Method, suffix) = suffix_bindings(m.sig, suffix)
 function make_namer(methods::Vector{Method})
     (node::Node)->begin        
         for method in methods
-            rb = method.sig.rev_bindings
-            if has(rb, node)
-                return symbol(string(rb[node], '_', method.id))
+            if hasname(method.sig, node)
+                return symbol(string(getname(method.sig,node), '_', method.id))
             end
         end
         nothing

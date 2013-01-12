@@ -70,9 +70,8 @@ function seq_dispatch!(d::DNode, methods, hullT::Tuple)
     for k=1:length(hullT)
         node, name = Nodes.refnode(Nodes.argnode, k), nothing
         for method in methods
-            rb = method.sig.rev_bindings
-            if has(rb, node)
-                name = symbol(string(rb[node], '_', method.id))
+            if hasname(method.sig, node)
+                name = symbol(string(getname(method.sig,node), '_', method.id))
                 break
             end
         end
