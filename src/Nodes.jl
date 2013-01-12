@@ -26,7 +26,7 @@ typepred(arg::Node, ::Type{Any})  = always
 typepred(arg::Node, ::Type{None}) = never
 typepred(arg::Node, typ)          = Isa(arg, typ)
 
-subs(d::Dict, node::Union(Arg, Never, Always)) = node
+subs(d::Dict, node::Union(Arg, Atom)) = node
 subs(d::Dict, node::Ref)    = Ref(   d[node.arg], node.index)
 subs(d::Dict, node::Length) = Length(d[node.arg])
 subs(d::Dict, node::Egal)   = Egal(  d[node.arg], node.value)
@@ -38,12 +38,10 @@ encode(v::Length) = :(length($(resultof(v.arg))))
 encode(g::Egal)   = :(is( $(resultof(g.arg)), $(quot(g.value))))
 encode(g::Isa)    = :(isa($(resultof(g.arg)), $(quot(g.typ  ))))
 
-# (&)(::Never,     ::Never) = never
-# (&)(::Predicate, ::Never) = never
-# (&)(::Never, ::Predicate) = never
-(&)(::Always,        ::Always) = always
-(&)(node::Predicate, ::Always) = node
-(&)(::Always, node::Predicate) = node
+
+(&)(node1::Atom{Bool}, node2::Atom{Bool}) = Atom(node1.value & node2.value)
+(&)(node1::Predicate,  node2::Atom{Bool}) = node2.value ? node1 : never
+(&)(node1::Atom{Bool}, node2::Predicate) = node2 & node1
 
 # to work around that type equivalence is weaker than isequal
 # works together with >=(::Intension, ::Intension)
@@ -55,7 +53,7 @@ samearg(n::Node, m::Node) = @assert n.arg===m.arg
 (&)(t::Isa,  e::Egal) = e & t
 (&)(s::Isa, t::Isa) = (samearg(s,t); typepred(s.arg,mytintersect(s.typ,t.typ)))
 
-depsof(node::Union(Arg, Never, Always))     = []
+depsof(node::Union(Arg, Atom))     = []
 depsof(node::Union(Ref, Length, Egal, Isa)) = [node.arg]
 
 function depsof(i::Intension, n::Ref)
