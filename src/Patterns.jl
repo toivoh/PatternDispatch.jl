@@ -33,13 +33,25 @@ resultof(node::Node) = error("Undefined!")
 
 # ---- Intension --------------------------------------------------------------
        
-type Intension
-    factors::Dict{Node,Predicate}
+typealias UsersDict Dict{Node,Set{Node}}
+
+adduser!(us::UsersDict, u::Node) = for d in depsof(u); adduser(users, u,d); end
+function adduser!(users::UsersDict, user::Node, dep::Node)
+    if !has(users, dep); adduser!(users, dep); users[dep] = Set() end
+    add(users[dep], user)
 end
 
-#const naught   = Intension((Node=>Predicate)[argnode => never])
-const naught   = Intension((Node=>Predicate)[always => never])
-const anything = Intension((Node=>Predicate)[])
+
+type Intension
+    factors::Dict{Node,Predicate}
+    users::UsersDict
+
+    function Intension(factors::Dict{Node,Predicate})
+        users = UsersDict()
+        for p in values(factors); adduser!(users, p); end
+        new(factors, users)
+    end
+end
 
 predsof(x::Intension) = values(x.factors)
 
@@ -57,6 +69,10 @@ function intension(factors::Predicate...)
     end
     Intension(gs)
 end
+
+#const naught   = Intension((Node=>Predicate)[argnode => never])
+const naught   = Intension((Node=>Predicate)[always => never])
+const anything = intension()
 
 (&)(x::Intension, y::Intension) = intension(predsof(x)..., predsof(y)...)
 isequal(x::Intension, y::Intension) = isequal(x.factors, y.factors)
