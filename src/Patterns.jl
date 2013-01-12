@@ -3,7 +3,7 @@ module Patterns
 import Base.&, Base.isequal, Base.>=, Base.>, Base.<=, Base.<, Base.==
 using Immutable
 
-export Node, Predicate, Guard, Never, Always, never, always
+export Node, Predicate, Atom, Guard, never, always
 export depsof
 export Intension, intension, naught, anything
 export encode, predsof, depsof, subs, resultof
@@ -15,10 +15,15 @@ export Pattern, suffix_bindings
 abstract Node{T}
 typealias Predicate Node{Bool}
 
-type Never  <: Predicate; end
-type Always <: Predicate; end
-const never   = Never()
-const always  = Always()
+@immutable type Atom{T} <: Node{T}
+    value::T
+end
+Atom{T}(value::T) = Atom{T}(value)
+
+depsof(node::Atom) = []
+
+const never  = Atom(false)
+const always = Atom(true)
 
 @immutable type Guard <: Node{None}
     pred::Predicate
