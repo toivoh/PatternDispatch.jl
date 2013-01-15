@@ -15,12 +15,12 @@ const argsym  = gensym("arg")
 
 @immutable type Ref    <: Node{Any};  arg::Node; index::Int;  end
 @immutable type Length <: Node{Any};  arg::Node;              end
-@immutable type Egal   <: Predicate;  arg::Node; value;       end
+@immutable type Egal   <: Predicate;  arg::Node; eq::Node;    end
 @immutable type Isa    <: Predicate;  arg::Node; typ;         end
 
 refnode(   arg::Node, index::Int) = Ref(arg, index)
 lengthnode(arg::Node)             = Length(arg)
-egalpred(  arg::Node, value)      = Egal(arg, value)
+egalpred(  arg::Node, value)      = Egal(arg, Atom(value))
 
 typepred(arg::Node, ::Type{Any})  = always
 typepred(arg::Node, ::Type{None}) = never
@@ -29,14 +29,15 @@ typepred(arg::Node, typ)          = Isa(arg, typ)
 subs(d::Dict, node::Union(Arg, Atom)) = node
 subs(d::Dict, node::Ref)    = Ref(   d[node.arg], node.index)
 subs(d::Dict, node::Length) = Length(d[node.arg])
-subs(d::Dict, node::Egal)   = Egal(  d[node.arg], node.value)
+subs(d::Dict, node::Egal)   = Egal(  d[node.arg], d[node.eq])
 subs(d::Dict, node::Isa)    = Isa(   d[node.arg], node.typ)
 
 encode(v::Arg)    = argsym
+encode(v::Atom)   = quot(v.value)
 encode(v::Ref)    = :( $(resultof(v.arg))[$(v.index)] )
 encode(v::Length) = :(length($(resultof(v.arg))))
-encode(g::Egal)   = :(is( $(resultof(g.arg)), $(quot(g.value))))
-encode(g::Isa)    = :(isa($(resultof(g.arg)), $(quot(g.typ  ))))
+encode(g::Egal)   = :(is( $(resultof(g.arg)), $(resultof(g.eq))))
+encode(g::Isa)    = :(isa($(resultof(g.arg)), $(quot(g.typ))))
 
 
 (&)(node1::Atom{Bool}, node2::Atom{Bool}) = Atom(node1.value & node2.value)
@@ -48,13 +49,14 @@ encode(g::Isa)    = :(isa($(resultof(g.arg)), $(quot(g.typ  ))))
 mytintersect(S,T) = (T <: S) ? T : tintersect(S,T)
 
 samearg(n::Node, m::Node) = @assert n.arg===m.arg
-(&)(e::Egal, f::Egal) = (samearg(e, f); e.value === f.value ? e : never)
-(&)(e::Egal, t::Isa)  = (samearg(e, t); isa(e.value, t.typ) ? e : never)
+(&)(e::Egal, f::Egal) = (samearg(e, f); e.eq === f.eq ?          e : never)
+(&)(e::Egal, t::Isa)  = (samearg(e, t); isa(e.eq.value, t.typ) ? e : never)
 (&)(t::Isa,  e::Egal) = e & t
 (&)(s::Isa, t::Isa) = (samearg(s,t); typepred(s.arg,mytintersect(s.typ,t.typ)))
 
 depsof(node::Arg) = []
-depsof(node::Union(Ref, Length, Egal, Isa)) = [node.arg]
+depsof(node::Egal) = Node[node.arg, node.eq]
+depsof(node::Union(Ref, Length, Isa)) = [node.arg]
 
 function depsof(i::Intension, n::Ref)
     Node[n.arg, Guard(i.factors[n.arg]), Guard(i.factors[Length(n.arg)])]
@@ -68,7 +70,7 @@ function intension(Ts::Tuple)
 end
 
 get_type(g::Isa)  = g.typ
-get_type(g::Egal) = typeof(g.value)
+get_type(g::Egal) = typeof(g.eq.value)
 function get_type(intent::Intension, node::Node)
     has(intent.factors, node) ? get_type(intent.factors[node]) : Any
 end
@@ -77,7 +79,7 @@ function julia_signature_of(intent::Intension)
     garg::Isa = intent.factors[argnode]
     @assert garg.typ <: Tuple
     glen::Egal = intent.factors[Length(argnode)]
-    nargs = glen.value
+    nargs = glen.eq.value
     tuple({get_type(intent, refnode(argnode, k)) for k=1:nargs}...)
 end
 julia_signature_of(p::Pattern) = julia_signature_of(p.intent)
@@ -117,7 +119,7 @@ function showpat(io::IO, users::Dict, node::Node)
 #        if k > 1 && !isa(u, Isa); print(io, '~'); end
         if printed && !(isa(u, Isa) || isa(u, Length)); print(io, '~'); end
         if isa(u, Symbol); print(io, u); printed = true
-        elseif isa(u, Egal); print(io, u.value); printed = true
+        elseif isa(u, Egal); print(io, u.eq.value); printed = true
         elseif isa(u, Isa)
             typ = u.typ
             if k+1 <= n && isa(us[k+1], Ref)
