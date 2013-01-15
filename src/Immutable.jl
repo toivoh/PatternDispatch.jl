@@ -24,7 +24,7 @@ function code_immutable(ex)
         end
     end
     
-    instances = Dict()
+    instances = ObjectIdDict()
     esc(quote
         type $sig
             $(body.args...)
