@@ -8,8 +8,8 @@ macro immutable(ex)
 end
 function code_immutable(ex)
     @expect is_expr(ex, :type, 2)
-    sig, body = ex.args    
-    typeex = (is_expr(sig, :(<:), 2) ? sig.args[1] : sig)
+    typesig, body = ex.args    
+    typeex = (is_expr(typesig, :(<:), 2) ? typesig.args[1] : typesig)
     typename = (is_expr(typeex, :curly) ? typeex.args[1] : typeex)::Symbol
     fields, types, sigs = Symbol[], {}, {}
     for arg in body.args
@@ -25,11 +25,13 @@ function code_immutable(ex)
     end
     
     instances = ObjectIdDict()
+    newimm = gensym("new")
     esc(quote
-        type $sig
+        type $typesig
             $(body.args...)
-            $typename($(sigs...)) = @get!($(quot(instances)), ($(fields...),),
+            $newimm($(sigs...)) = @get!($(quot(instances)), ($(fields...),),
                                           new($(fields...)))
+            $typename($(sigs...)) = $newimm($(fields...))
         end
     end)
 end
