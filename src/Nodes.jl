@@ -26,6 +26,10 @@ typepred(arg::Node, ::Type{Any})  = always
 typepred(arg::Node, ::Type{None}) = never
 typepred(arg::Node, typ)          = Isa(arg, typ)
 
+indof(node::Ref) = node.index
+eqof(node::Egal) = node.eq
+Tof(node::Isa)   = node.typ
+
 subs(d::Dict, node::Union(Arg, Atom)) = node
 subs(d::Dict, node::Ref)    = Ref(   d[node.arg], node.index)
 subs(d::Dict, node::Length) = Length(d[node.arg])
@@ -69,17 +73,17 @@ function intension(Ts::Tuple)
               {typepred(refnode(argnode, k),T) for (k,T) in enumerate(Ts)}...)
 end
 
-get_type(g::Isa)  = g.typ
-get_type(g::Egal) = typeof(g.eq.value)
+get_type(g::Isa)  = Tof(g)
+get_type(g::Egal) = typeof(eqof(g).value)
 function get_type(intent::Intension, node::Node)
     has(intent.factors, node) ? get_type(intent.factors[node]) : Any
 end
 function julia_signature_of(intent::Intension)
     if !has(intent.factors, argnode);  return Tuple;  end
     garg::Isa = intent.factors[argnode]
-    @assert garg.typ <: Tuple
+    @assert Tof(garg) <: Tuple
     glen::Egal = intent.factors[Length(argnode)]
-    nargs = glen.eq.value
+    nargs = eqof(glen).value
     tuple({get_type(intent, refnode(argnode, k)) for k=1:nargs}...)
 end
 julia_signature_of(p::Pattern) = julia_signature_of(p.intent)
@@ -116,37 +120,33 @@ function showpat(io::IO, users::Dict, node::Node)
     typ = Any
     while k <= n
         u = us[k]
-#        if k > 1 && !isa(u, Isa); print(io, '~'); end
         if printed && !(isa(u, Isa) || isa(u, Length)); print(io, '~'); end
         if isa(u, Symbol); print(io, u); printed = true
-        elseif isa(u, Egal); print(io, u.eq.value); printed = true
+        elseif isa(u, Egal); print(io, eqof(u).value); printed = true
         elseif isa(u, Isa)
-            typ = u.typ
+            typ = Tof(u)
             if k+1 <= n && isa(us[k+1], Ref)
-                if (u.typ == Tuple) || (u.typ == Vector)
+                if (Tof(u) == Tuple) || (Tof(u) == Vector)
                     k += 1
                     continue
                 end
             end
-            print(io, "::", u.typ); printed = true            
+            print(io, "::", Tof(u)); printed = true            
         elseif isa(u, Length) # todo: do something
         elseif isa(u, Ref)
-#            print(io, '(')
             print(io, typ <: Vector ? '[' : '(')
             i = 0
             while k <= n && isa(us[k], Ref)
                 if i==0; i=1; end
                 u = us[k]
-                @assert i <= u.index
-                while i < u.index; print(io, ", "); i += 1; end
-                i = u.index
+                @assert i <= indof(u)
+                while i < indof(u); print(io, ", "); i += 1; end
+                i = indof(u)
                 showpat(io, users, u)
                 k += 1
             end
             if i == 1; print(io, ','); end
             print(io, typ <: Vector ? ']' : ')')
-#            print(io, ')')
-#            if k == n && isa(us[k], Isa) && us[k].typ == Tuple; return; end
             printed = true
         else
             error("unknown node type")
