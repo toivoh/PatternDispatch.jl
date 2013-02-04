@@ -40,26 +40,26 @@ function recode(ex)
     p_ex, syms
 end
 
-recode(c::Context, arg, ex) = push(c.preds, :(egalpred($arg,$(quot(ex)))))
-recode(c::Context, arg, ex::Symbol) = push(c.bindings, :($(quot(ex))=>$arg))
+recode(c::Context, arg, ex) = push!(c.preds, :(egalpred($arg,$(quot(ex)))))
+recode(c::Context, arg, ex::Symbol) = push!(c.bindings, :($(quot(ex))=>$arg))
 function recode(c::Context, arg, ex::Expr)
     head, args = ex.head, ex.args
     nargs = length(args)
     if head === :(::)
         @assert 1 <= nargs <= 2
         if nargs == 1
-            push(c.preds, :( typepred($arg, $(esc(args[1]))) ))
+            push!(c.preds, :( typepred($arg, $(esc(args[1]))) ))
         else
-            push(c.preds, :( typepred($arg, $(esc(args[2]))) ))
+            push!(c.preds, :( typepred($arg, $(esc(args[2]))) ))
             recode(c, arg, args[1])
         end
     elseif head === :tuple || head === :vcat
         argtype = (head === :tuple) ? Tuple : Vector
-        push(c.preds, :( typepred($arg, $(quot(argtype))) ))
-        push(c.preds, :( egalpred(lengthnode($arg), $(quot(nargs))) ))
+        push!(c.preds, :( typepred($arg, $(quot(argtype))) ))
+        push!(c.preds, :( egalpred(lengthnode($arg), $(quot(nargs))) ))
         for (k, p) in enumerate(args)
             node = gensym("e$k")
-            push(c.code, :( $node = refnode($arg, $k) ))
+            push!(c.code, :( $node = refnode($arg, $k) ))
             recode(c, node, p)
         end
     elseif head === :cell1d
@@ -67,7 +67,7 @@ function recode(c::Context, arg, ex::Expr)
     elseif head === :call && args[1] == :~
         for p in args[2:end]; recode(c, arg, p); end
     elseif head === :$ && nargs == 1
-        push(c.preds, :(egalpred($arg, $(esc(args[1])))))
+        push!(c.preds, :(egalpred($arg, $(esc(args[1])))))
     elseif head === :... && nargs == 1
         error("@pattern: varargs are not yet implemented")
     else

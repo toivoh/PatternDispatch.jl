@@ -49,7 +49,7 @@ function sequence!(s::Sequence, node::Node)
 
     for dep in depsof(s.intent, node);  sequence!(s, dep)  end
     newnode = s.results[node] = wrap(s, subs(s.results, node), node)
-    push(s.seq, newnode)
+    push!(s.seq, newnode)
 end
 
 preguard!(results::ResultsDict, g::Guard) = (results[g] = Guard(always))
@@ -78,7 +78,7 @@ function seq_dispatch!(d::DNode, methods, hullT::Tuple)
         end
         if name === nothing;  name = symbol("arg$k");  end
         
-        push(argsyms, name)
+        push!(argsyms, name)
         provide!(results, node, name)
     end
 
@@ -163,7 +163,7 @@ function encode!(code::Vector, node::Result)
     else
         var = node.name === nothing ? gensym("t") : node.name
         node.ex = var
-        push(code, :( $var = $ex ))
+        push!(code, :( $var = $ex ))
     end
 end
 

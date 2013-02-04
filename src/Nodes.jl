@@ -50,7 +50,7 @@ encode(g::Isa)    = :(isa($(resultof(g.arg)), $(quot(g.typ))))
 
 # to work around that type equivalence is weaker than isequal
 # works together with >=(::Intension, ::Intension)
-mytintersect(S,T) = (T <: S) ? T : tintersect(S,T)
+mytintersect(S,T) = (T <: S) ? T : typeintersect(S,T)
 
 samearg(n::Node, m::Node) = @assert n.arg===m.arg
 (&)(e::Egal, f::Egal) = (samearg(e, f); e.eq === f.eq ?          e : never)
@@ -102,7 +102,7 @@ end
 adduser(users::Dict, u::Node) = for d in depsof(u); adduser(users, u, d); end
 function adduser(users::Dict, user, dep::Node)
     if !has(users, dep); adduser(users, dep); users[dep] = Set() end
-    add(users[dep], user)
+    add!(users[dep], user)
 end
 
 const typeorder = [Symbol=>1, Length=>2, Egal=>3, Isa=>3, Ref=>4]

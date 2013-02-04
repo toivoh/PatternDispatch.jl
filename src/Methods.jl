@@ -1,6 +1,6 @@
 
 module Methods
-import Base.add, Base.>=, Base.&
+import Base.add!, Base.>=, Base.&
 import Dispatch.domainof, Dispatch.signatureof, Dispatch.make_namer
 import Dispatch.is_empty_domain, Dispatch.hullof
 import Nodes
@@ -79,7 +79,7 @@ end
 
 methodsof(mt::MethodTable) = [m.value for m in ordered_subDAGof(mt.top)]
 
-function add(mt::MethodTable, m::Method)
+function add!(mt::MethodTable, m::Method)
     m.id = (mt.method_counter += 1)
     addmethod!(mt.top, mt.name, m)
 
@@ -103,7 +103,7 @@ function compile!(mt::MethodTable)
     compiled = Set{Tuple}()
     for hullT in reverse(hullTs)
         if has(compiled, hullT); continue end
-        add(compiled, hullT)
+        add!(compiled, hullT)
         compile!(mt, methods, hullT)
     end
 end
@@ -212,12 +212,12 @@ function code_pattern(ex)
             local const f = mt.f
             const $f = (args...)->f(args...)
             method_tables[$f] = mt
-            add(mt, method)
+            add!(mt, method)
         else
             if !has(method_tables, $f)
                 error($("$fname is not a pattern function"))
             end
-            add(method_tables[$f], method)
+            add!(method_tables[$f], method)
         end
     end
 end

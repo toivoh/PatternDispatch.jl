@@ -22,7 +22,7 @@ end
 raw_filter!{T}(n::Node{T}, keep::Set{T}) = raw_filter!(Set{Node{T}}(), n, keep)
 function raw_filter!{T}(seen::Set{Node{T}}, node::Node{T}, keep::Set{T})
     if has(seen, node); return end
-    add(seen, node)
+    add!(seen, node)
     node.gt = Set{Node{T}}(filter(node->(has(keep, node.value)), node.gt)...)
     for child in node.gt;  raw_filter!(child, keep)  end
 end
@@ -30,7 +30,7 @@ end
 subDAGof{T}(node::Node{T}) = (sub = Set{Node{T}}(); addsubDAG!(sub, node); sub)
 function addsubDAG!{T}(seen::Set{Node{T}}, node::Node{T})
     if has(seen, node); return; end
-    add(seen, node)
+    add!(seen, node)
     for below in node.gt; addsubDAG!(seen, below); end       
 end
 
@@ -41,7 +41,7 @@ function ordered_subDAGof{T}(node::Node{T})
 end
 function addsubDAG!{T}(seen::Set{Node{T}},order::Vector{Node{T}},node::Node{T})
     if has(seen, node); return; end
-    add(seen, node); push(order, node)
+    add!(seen, node); push!(order, node)
     for below in node.gt; addsubDAG!(seen, order, below); end       
 end
 
@@ -55,15 +55,15 @@ function insert!{T}(seen::Dict{Node{T},Bool}, at::Node{T}, node::Node{T})
             return seen[at] = true
         end
         # node > at
-        add(node.gt, at)
+        add!(node.gt, at)
         at_above_node = false
     else
         at_above_node = any([insert!(seen, below, node) for below in at.gt])
     end
     if !at_above_node
         if at.value >= node.value
-            del_each(at.gt, at.gt & node.gt)
-            add(at.gt, node)
+            del_each!(at.gt, at.gt & node.gt)
+            add!(at.gt, node)
             at_above_node = true
         end
     end

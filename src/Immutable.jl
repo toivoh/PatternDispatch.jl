@@ -29,13 +29,13 @@ function code_immutable(ex)
     needs_default_constructor = true
     for def in typebody.args
         if isa(def, Symbol)
-            push(fields, def)
-            push(types,  quot(Any))
-            push(sigs, def)
+            push!(fields, def)
+            push!(types,  quot(Any))
+            push!(sigs, def)
         elseif is_expr(def, :(::), 2)
-            push(fields, def.args[1])
-            push(types,  def.args[2])            
-            push(sigs, def)
+            push!(fields, def.args[1])
+            push!(types,  def.args[2])            
+            push!(sigs, def)
         elseif is_fdef(def)
             sig, body = split_fdef(def)
             if sig.args[1] === typename  # constructor
@@ -44,14 +44,14 @@ function code_immutable(ex)
                 def = :($sig=$body)
             end
         end
-        push(defs, def)    
+        push!(defs, def)    
     end
     
     objects = ObjectIdDict()
-    push(defs, :($newimm($(sigs...)) = @get!($(quot(objects)), ($(fields...),),
+    push!(defs, :($newimm($(sigs...)) = @get!($(quot(objects)),($(fields...),),
                                              new($(fields...))) ))
     if needs_default_constructor
-        push(defs, :( $typename($(sigs...)) = $newimm($(fields...)) ))
+        push!(defs, :( $typename($(sigs...)) = $newimm($(fields...)) ))
     end
     esc(expr(:type, typesig, expr(:block, defs)))
 end
