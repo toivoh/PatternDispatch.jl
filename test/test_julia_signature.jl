@@ -1,7 +1,7 @@
 require("PatternDispatch.jl")
 
 module TestJuliaSignature
-using PatternDispatch.Patterns, PatternDispatch.Recode
+using PatternDispatch.Nodes, PatternDispatch.Recode
 
 @show julia_signature_of(@qpat (x,))
 @show julia_signature_of(@qpat (x::Int,))
