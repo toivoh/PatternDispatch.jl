@@ -10,8 +10,6 @@ Installation
 ------------
 In Julia, install the `PatternDispatch` package:
 
-    load("pkg.jl")
-    Pkg.init()  # If you haven't done it before
     Pkg.add("PatternDispatch")
 
 Examples
@@ -30,7 +28,6 @@ type assertions, just like regular method signatures.
 A number of additional constructs are also allowed.
 Signatures can contain a mixture of variables and literals, e.g.
 
-    load("PatternDispatch.jl")
     using PatternDispatch
 
     @pattern f(x) =  x
