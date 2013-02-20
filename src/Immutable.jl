@@ -1,6 +1,6 @@
 
 module Immutable
-using Meta
+using PatternDispatch.Meta
 export @immutable, @get!  # shouldn't need to export @get!
 
 const newimm = gensym("newimm")

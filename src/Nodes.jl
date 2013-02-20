@@ -2,7 +2,7 @@
 module Nodes
 import Base.&, Base.isequal, Base.>=, Base.>, Base.<=, Base.<, Base.show
 import Patterns.depsof, Patterns.subs, Patterns.intension
-using Meta, Immutable, Patterns
+using PatternDispatch.Meta, Immutable, Patterns
 export argsym, argnode, refnode, lengthnode, egalpred, typepred
 export julia_signature_of
 

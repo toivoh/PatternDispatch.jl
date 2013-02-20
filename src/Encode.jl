@@ -1,6 +1,6 @@
 
 module Encode
-using Meta, Patterns, Dispatch
+using PatternDispatch.Meta, Patterns, Dispatch
 import Nodes
 import Patterns.resultof, Nodes.encode
 
