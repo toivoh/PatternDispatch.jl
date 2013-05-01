@@ -1,7 +1,7 @@
 
 # Recode: function signature -> Pattern creating AST
 module Recode
-using PatternDispatch.Meta, Patterns, Nodes
+using ..Meta, ..Patterns, ..Nodes
 export recode, @qpat, @ipat
 export refnode, egalpred, typepred, lengthnode
 

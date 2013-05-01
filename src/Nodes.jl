@@ -1,8 +1,8 @@
 
 module Nodes
 import Base.&, Base.isequal, Base.>=, Base.>, Base.<=, Base.<, Base.show
-import Patterns.depsof, Patterns.subs, Patterns.intension
-using PatternDispatch.Meta, Immutable, Patterns
+import ..Patterns.depsof, ..Patterns.subs, ..Patterns.intension
+using ..Meta, ..Intern, ..Patterns
 export argsym, argnode, refnode, lengthnode, egalpred, typepred
 export julia_signature_of
 
@@ -13,10 +13,10 @@ type Arg <: Node{Any}; end
 const argnode = Arg()
 const argsym  = gensym("arg")
 
-@immutable type Ref    <: Node{Any};  arg::Node; index::Int;  end
-@immutable type Length <: Node{Any};  arg::Node;              end
-@immutable type Egal   <: Predicate;  arg::Node; eq::Node;    end
-@immutable type Isa    <: Predicate;  arg::Node; typ;         end
+@interned type Ref    <: Node{Any};  arg::Node; index::Int;  end
+@interned type Length <: Node{Any};  arg::Node;              end
+@interned type Egal   <: Predicate;  arg::Node; eq::Node;    end
+@interned type Isa    <: Predicate;  arg::Node; typ;         end
 
 refnode(   arg::Node, index::Int) = Ref(arg, index)
 lengthnode(arg::Node)             = Length(arg)

@@ -1,8 +1,8 @@
 
 module Encode
-using PatternDispatch.Meta, Patterns, Dispatch
-import Nodes
-import Patterns.resultof, Nodes.encode
+using ..Meta, ..Patterns, ..Dispatch
+import ..Nodes
+import ..Patterns.resultof, ..Nodes.encode
 
 export code_dispatch, seq_dispatch!
 

@@ -1,10 +1,10 @@
 
 module Methods
 import Base.add!, Base.>=, Base.&
-import Dispatch.domainof, Dispatch.signatureof, Dispatch.make_namer
-import Dispatch.is_empty_domain, Dispatch.hullof
-import Nodes
-using PatternDispatch.Meta, PartialOrder, Patterns, Dispatch, Encode, Recode
+import ..Dispatch.domainof, ..Dispatch.signatureof, ..Dispatch.make_namer
+import ..Dispatch.is_empty_domain, ..Dispatch.hullof
+import ..Nodes
+using ..Meta, ..PartialOrder, ..Patterns, ..Dispatch, ..Encode, ..Recode
 
 export @pattern, show_dispatch
 

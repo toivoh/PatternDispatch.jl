@@ -1,12 +1,12 @@
 
 module Dispatch
-using PartialOrder
+using ..PartialOrder
 
 export DNode, Decision, MethodCall, NoMethodNode
 export domainof, signatureof, make_namer
 export addmethod!, simplify, build_dtree
 
-import Patterns
+import ..Patterns
 const INode = Patterns.Node # todo: remove!
 
 ## Method interface: ##

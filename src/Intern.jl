@@ -1,25 +1,25 @@
 
-module Immutable
-using PatternDispatch.Meta
-export @immutable, @get!  # shouldn't need to export @get!
+module Intern
+using ..Meta
+export @interned, @get!  # shouldn't need to export @get!
 
-const newimm = gensym("newimm")
+const new_interned = gensym("new_interned")
 
 function replace_new(ex::Expr)
     if ex.head === :quote; return ex; end
 
     args = {replace_new(arg) for arg in ex.args}
     if (ex.head === :call) && args[1] == :new
-        return expr(:call, newimm, args[2:end]...)
+        return expr(:call, new_interned, args[2:end]...)
     end
     expr(ex.head, args)
 end
 replace_new(ex) = ex
 
-macro immutable(ex)
-    code_immutable(ex)
+macro interned(ex)
+    code_interned(ex)
 end
-function code_immutable(ex)
+function code_interned(ex)
     @expect is_expr(ex, :type, 2)
     typesig, typebody = ex.args    
     typeex = (is_expr(typesig, :(<:), 2) ? typesig.args[1] : typesig)
@@ -48,10 +48,10 @@ function code_immutable(ex)
     end
     
     objects = ObjectIdDict()
-    push!(defs, :($newimm($(sigs...)) = @get!($(quot(objects)),($(fields...),),
-                                             new($(fields...))) ))
+    push!(defs, :($new_interned($(sigs...)) = 
+                  @get!($(quot(objects)),($(fields...),), new($(fields...))) ))
     if needs_default_constructor
-        push!(defs, :( $typename($(sigs...)) = $newimm($(fields...)) ))
+        push!(defs, :( $typename($(sigs...)) = $new_interned($(fields...)) ))
     end
     esc(expr(:type, typesig, expr(:block, defs)))
 end

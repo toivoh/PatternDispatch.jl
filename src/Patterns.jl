@@ -1,7 +1,7 @@
 
 module Patterns
 import Base.&, Base.isequal, Base.>=, Base.>, Base.<=, Base.<, Base.==
-using Immutable
+using ..Intern
 
 export Node, Predicate, Atom, Guard, never, always
 export depsof
@@ -15,7 +15,7 @@ export Pattern, suffix_bindings
 abstract Node{T}
 typealias Predicate Node{Bool}
 
-@immutable type Atom{T} <: Node{T}
+@interned type Atom{T} <: Node{T}
     value::T
 end
 Atom{T}(value::T) = Atom{T}(value)
@@ -25,7 +25,7 @@ depsof(node::Atom) = []
 const never  = Atom(false)
 const always = Atom(true)
 
-@immutable type Guard <: Node{None}
+@interned type Guard <: Node{None}
     pred::Predicate
 end
 subs(d::Dict, node::Guard) = Guard(d[node.pred])
