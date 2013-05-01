@@ -20,8 +20,8 @@ macro interned(ex)
     code_interned(ex)
 end
 function code_interned(ex)
-    @expect is_expr(ex, :type, 2)
-    typesig, typebody = ex.args    
+    @expect is_expr(ex, :type, 3)
+    imm, typesig, typebody = ex.args    
     typeex = (is_expr(typesig, :(<:), 2) ? typesig.args[1] : typesig)
     typename = (is_expr(typeex, :curly) ? typeex.args[1] : typeex)::Symbol
 
@@ -53,7 +53,7 @@ function code_interned(ex)
     if needs_default_constructor
         push!(defs, :( $typename($(sigs...)) = $new_interned($(fields...)) ))
     end
-    esc(expr(:type, typesig, expr(:block, defs)))
+    esc(expr(:type, imm, typesig, expr(:block, defs)))
 end
 
 end
