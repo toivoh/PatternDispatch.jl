@@ -15,7 +15,7 @@ end
 quot(ex) = Expr(:quote, ex)
 
 is_expr(ex::Expr, head)          = ex.head === head
-is_expr(ex::Expr, heads::Set)    = has(heads, ex.head)
+is_expr(ex::Expr, heads::Set)    = contains(heads, ex.head)
 is_expr(ex::Expr, heads::Vector) = contains(heads, ex.head)
 is_expr(ex,       head)          = false
 is_expr(ex,       head, n::Int)  = is_expr(ex, head) && length(ex.args) == n
@@ -53,7 +53,7 @@ split_fdef(f::Any) = error("split_fdef: expected function definition, got\n$f")
 macro get!(d, k, default)
     quote
         d, k = $(esc(d)), $(esc(k))
-        has(d, k) ? d[k] : (d[k] = $(esc(default)))
+        haskey(d, k) ? d[k] : (d[k] = $(esc(default)))
     end
 end
 

@@ -41,7 +41,7 @@ function wrap(s::Sequence, node::Node, orig_node::Node)
 end
 
 function sequence!(s::Sequence, node::Node)
-    if has(s.results, node)
+    if haskey(s.results, node)
         newnode = s.results[node]
         if isa(newnode, Result); newnode.nrefs += 1; end
         return
@@ -71,7 +71,7 @@ function seq_dispatch!(d::DNode, methods, hullT::Tuple)
         node, name = Nodes.refnode(Nodes.argnode, k), nothing
         for method in methods
             rb = method.sig.rev_bindings
-            if has(rb, node)
+            if haskey(rb, node)
                 name = symbol(string(rb[node], '_', method.id))
                 break
             end

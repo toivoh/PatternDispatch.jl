@@ -39,7 +39,7 @@ function make_namer(methods::Vector{Method})
     (node::Node)->begin        
         for method in methods
             rb = method.sig.rev_bindings
-            if has(rb, node)
+            if haskey(rb, node)
                 return symbol(string(rb[node], '_', method.id))
             end
         end
@@ -102,7 +102,7 @@ function compile!(mt::MethodTable)
     
     compiled = Set{Tuple}()
     for hullT in reverse(hullTs)
-        if has(compiled, hullT); continue end
+        if contains(compiled, hullT); continue end
         add!(compiled, hullT)
         compile!(mt, methods, hullT)
     end
@@ -151,7 +151,7 @@ function show_dispatch(io::IO, mt::MethodTable, Ts::Tuple)
     end
 
     subs_invocation(ex) = begin
-        if is_expr(ex, :quote) && has(mnames, ex.args[1]); mnames[ex.args[1]]
+        if is_expr(ex, :quote) && haskey(mnames, ex.args[1]); mnames[ex.args[1]]
         else; nothing
         end
     end
@@ -171,7 +171,7 @@ end
 const method_tables = Dict{Function, MethodTable}()
 
 function show_dispatch(f::Function, args...)
-    if !has(method_tables, f);  error("not a pattern function: $f")  end
+    if !haskey(method_tables, f);  error("not a pattern function: $f")  end
     show_dispatch(method_tables[f], args...)
 end
 
@@ -214,7 +214,7 @@ function code_pattern(ex)
             method_tables[$f] = mt
             add!(mt, method)
         else
-            if !has(method_tables, $f)
+            if !haskey(method_tables, $f)
                 error($("$fname is not a pattern function"))
             end
             add!(method_tables[$f], method)

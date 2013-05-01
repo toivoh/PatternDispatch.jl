@@ -55,7 +55,7 @@ end
 
 simplify!{T}(n::Node{T}, domain) = simplify!((Node{T}=>Node{T})[], n, domain)
 function simplify!{T}(subs::Dict{Node{T},Node{T}}, node::Node{T}, domain)
-    if has(subs, node);  return subs[node]  end
+    if haskey(subs, node);  return subs[node]  end
     ndom = node.value & domain
     for child in node.gt
         if ndom == child.value & domain
@@ -125,7 +125,7 @@ function build_dtree{M}(top::Node{M}, ms::Set{Node{M}})
         pass = build_dtree(pivot, ms & below)
         fail = build_dtree(top,   ms - below)
 
-        methods = M[node.value for node in filter(node->has(ms, node), 
+        methods = M[node.value for node in filter(node->contains(ms, node), 
                                                   ordered_subDAGof(top))]
         Decision(domainof(pivot.value), pass, fail, methods)
     end    

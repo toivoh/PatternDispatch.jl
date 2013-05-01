@@ -77,10 +77,10 @@ end
 get_type(g::Isa)  = Tof(g)
 get_type(g::Egal) = typeof(eqof(g).value)
 function get_type(intent::Intension, node::Node)
-    has(intent.factors, node) ? get_type(intent.factors[node]) : Any
+    haskey(intent.factors, node) ? get_type(intent.factors[node]) : Any
 end
 function julia_signature_of(intent::Intension)
-    if !has(intent.factors, argnode);  return Tuple;  end
+    if !haskey(intent.factors, argnode);  return Tuple;  end
     garg::Isa = intent.factors[argnode]
     @assert Tof(garg) <: Tuple
     glen::Egal = intent.factors[Length(argnode)]
@@ -102,7 +102,7 @@ end
     
 adduser(users::Dict, u::Node) = for d in depsof(u); adduser(users, u, d); end
 function adduser(users::Dict, user, dep::Node)
-    if !has(users, dep); adduser(users, dep); users[dep] = Set() end
+    if !haskey(users, dep); adduser(users, dep); users[dep] = Set() end
     add!(users[dep], user)
 end
 
@@ -112,7 +112,7 @@ cmp(x::Symbol, y::Symbol) = string(x) < string(y)
 cmp(x::Ref,    y::Ref)    = x.index   < y.index
 
 function showpat(io::IO, users::Dict, node::Node)
-    if !has(users, node); print(io, "::Any"); return end
+    if !haskey(users, node); print(io, "::Any"); return end
 
     # printing order: Symbol, Ref, Egal, Isa
     us = sort(cmp, {users[node]...})
