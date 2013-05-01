@@ -24,14 +24,13 @@ type Context
     Context() = new({}, {}, {})
 end
 
-const typed_dict = symbol("typed-dict")
 function recode(ex)
     c = Context()
     recode(c, quot(argnode), ex)
     p_ex = quote
         $(c.code...)
         Pattern(intension($(c.preds...)), 
-                $(expr(typed_dict, :(Symbol=>Node), c.bindings...)))
+                $(expr(:typed_dict, :(Symbol=>Node), c.bindings...)))
     end
     syms = Symbol[b.args[1].args[1] for b in c.bindings] 
     if length(syms) != length(Set{Symbol}(syms...))
