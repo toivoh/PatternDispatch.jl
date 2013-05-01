@@ -62,7 +62,7 @@ function insert!{T}(seen::Dict{Node{T},Bool}, at::Node{T}, node::Node{T})
     end
     if !at_above_node
         if at.value >= node.value
-            del_each!(at.gt, at.gt & node.gt)
+            setdiff!(at.gt, at.gt & node.gt)
             add!(at.gt, node)
             at_above_node = true
         end
