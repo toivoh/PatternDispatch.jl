@@ -117,8 +117,8 @@ function compile!(mt::MethodTable, methods::Vector{Method}, hullT::Tuple)
     code    = code_dispatch(dtree)
 
     args = {:($argsym::$(quot(T))) for (argsym,T) in zip(argsyms,hullT)}    
-    fdef = expr(:function, :( $(mt.name)($(args...)) ), code)
-    mt.julia_methods[hullT] = expr(:function, :( dispatch($(args...)) ), code)
+    fdef = Expr(:function, :( $(mt.name)($(args...)) ), code)
+    mt.julia_methods[hullT] = Expr(:function, :( dispatch($(args...)) ), code)
 
     eval(:(let
             const f = $(quot(mt.f))
@@ -145,7 +145,7 @@ function show_dispatch(io::IO, mt::MethodTable, Ts::Tuple)
         mnames[method.body] = mname
 
         args = keys(method.sig.bindings) # Right order? Does it matter?
-        Base.show_unquoted(io, expr(:function, :($mname($(args...))), 
+        Base.show_unquoted(io, Expr(:function, :($mname($(args...))), 
                                     method.body_ex))
         print(io,"\n\n")
     end

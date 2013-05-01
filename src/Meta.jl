@@ -12,7 +12,7 @@ end
 
 # ---- Metaprogramming --------------------------------------------------------
 
-quot(ex) = expr(:quote, ex)
+quot(ex) = Expr(:quote, ex)
 
 is_expr(ex::Expr, head)          = ex.head === head
 is_expr(ex::Expr, heads::Set)    = has(heads, ex.head)
@@ -27,7 +27,7 @@ end
 
 subsubs_ex(subs::Function, ex) = ex
 function subsubs_ex(subs::Function, ex::Expr)
-    ex.head === :quote ? ex : expr(ex.head, {subs_ex(subs,a) for a in ex.args})
+    ex.head === :quote ? ex : Expr(ex.head, {subs_ex(subs,a) for a in ex.args}...)
 end
 
 function is_fdef(ex::Expr) 

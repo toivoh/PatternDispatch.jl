@@ -30,7 +30,7 @@ function recode(ex)
     p_ex = quote
         $(c.code...)
         Pattern(intension($(c.preds...)), 
-                $(expr(:typed_dict, :(Symbol=>Node), c.bindings...)))
+                $(Expr(:typed_dict, :(Symbol=>Node), c.bindings...)))
     end
     syms = Symbol[b.args[1].args[1] for b in c.bindings] 
     if length(syms) != length(Set{Symbol}(syms...))

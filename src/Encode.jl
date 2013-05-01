@@ -110,7 +110,7 @@ end
 # ---- decision tree -> dispatch code -----------------------------------------
 
 blockwrap(ex)       = ex
-blockwrap(exprs...) = expr(:block, exprs...)
+blockwrap(exprs...) = Expr(:block, exprs...)
 
 function code_dispatch(::NoMethodNode)
     :( error("No matching pattern method found") )
@@ -119,14 +119,14 @@ function code_dispatch(m::MethodCall)
     prebind = encoded(m.bind_seq)
     args = {resultof(node) for node in m.bindings}
     blockwrap(prebind...,
-         expr(:call, quot(m.m.body), args...))
+         Expr(:call, quot(m.m.body), args...))
 end
 function code_dispatch(d::Decision)
     pre = encoded(d.pre)
     pred = code_predicate(d.seq)
     pass = code_dispatch(d.pass)
     fail = code_dispatch(d.fail)
-    code = expr(:if, pred, pass, fail)
+    code = Expr(:if, pred, pass, fail)
     blockwrap(pre..., code)
 end
 
@@ -137,7 +137,7 @@ function code_predicate(seq::Vector{Node})
     pred = nothing
     for node in seq
         if isa(node, Guard)
-            factor = isempty(code) ? node.pred.ex : expr(:block, code..., node.pred.ex)
+            factor = isempty(code) ? node.pred.ex : Expr(:block, code..., node.pred.ex)
             pred = pred === nothing ? factor : (:($pred && $factor))
             code = {}
         else

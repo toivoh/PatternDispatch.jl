@@ -10,9 +10,9 @@ function replace_new(ex::Expr)
 
     args = {replace_new(arg) for arg in ex.args}
     if (ex.head === :call) && args[1] == :new
-        return expr(:call, new_interned, args[2:end]...)
+        return Expr(:call, new_interned, args[2:end]...)
     end
-    expr(ex.head, args)
+    Expr(ex.head, args...)
 end
 replace_new(ex) = ex
 
@@ -53,7 +53,7 @@ function code_interned(ex)
     if needs_default_constructor
         push!(defs, :( $typename($(sigs...)) = $new_interned($(fields...)) ))
     end
-    esc(expr(:type, imm, typesig, expr(:block, defs)))
+    esc(Expr(:type, imm, typesig, Expr(:block, defs...)))
 end
 
 end
