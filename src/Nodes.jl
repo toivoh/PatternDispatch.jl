@@ -68,6 +68,7 @@ end
 depsof(i::Intension, node::Length) = Node[node.arg, Guard(i.factors[node.arg])]
 
 function intension(Ts::Tuple)
+    Ts = {Ts...}  # until enumerate supports tuples again
     intension(typepred(argnode, Tuple),
               egalpred(lengthnode(argnode), length(Ts)),
               {typepred(refnode(argnode, k),T) for (k,T) in enumerate(Ts)}...)
