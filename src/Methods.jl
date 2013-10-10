@@ -102,8 +102,8 @@ function compile!(mt::MethodTable)
     
     compiled = Set{Tuple}()
     for hullT in reverse(hullTs)
-        if contains(compiled, hullT); continue end
-        add!(compiled, hullT)
+        if hullT in compiled; continue end
+        push!(compiled, hullT)
         compile!(mt, methods, hullT)
     end
 end

@@ -15,8 +15,8 @@ end
 quot(ex) = Expr(:quote, ex)
 
 is_expr(ex::Expr, head)          = ex.head === head
-is_expr(ex::Expr, heads::Set)    = contains(heads, ex.head)
-is_expr(ex::Expr, heads::Vector) = contains(heads, ex.head)
+is_expr(ex::Expr, heads::Set)    = ex.head in heads
+is_expr(ex::Expr, heads::Vector) = ex.head in heads
 is_expr(ex,       head)          = false
 is_expr(ex,       head, n::Int)  = is_expr(ex, head) && length(ex.args) == n
 
