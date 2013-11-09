@@ -103,8 +103,8 @@ function choose_pivot{M}(top::Node{M}, ms::Set{Node{M}})
     nmethods = length(ms)
     p_opt = nothing
     n_opt = nmethods+1
-    for pivot in top.gt & ms
-        below = ms & subDAGof(pivot)
+    for pivot in intersect(top.gt, ms)
+        below = intersect(ms, subDAGof(pivot))
         npass = length(below)
         nfail = nmethods - npass
         n = max(npass, nfail)
@@ -122,10 +122,10 @@ function build_dtree{M}(top::Node{M}, ms::Set{Node{M}})
     else        
         pivot = choose_pivot(top, ms)
         below = subDAGof(pivot)
-        pass = build_dtree(pivot, ms & below)
-        fail = build_dtree(top,   ms - below)
+        pass = build_dtree(pivot, intersect(ms, below))
+        fail = build_dtree(top,   setdiff(ms, below))
 
-        methods = M[node.value for node in filter(node->contains(ms, node), 
+        methods = M[node.value for node in filter(node->(node in ms), 
                                                   ordered_subDAGof(top))]
         Decision(domainof(pivot.value), pass, fail, methods)
     end    
