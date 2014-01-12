@@ -173,5 +173,13 @@ function reemit!(dest, p::Pattern)
     map
 end
 
+function reemit!(dest, p::Pattern, suffix::String)
+    map = reemit!(dest, p.g)
+    for (key, node) in p.bindings
+        emit!(dest, Binding(symbol(string(key,suffix))), map[node])
+    end
+    map
+end
+
 
 end # module
