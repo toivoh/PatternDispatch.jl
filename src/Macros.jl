@@ -10,16 +10,16 @@ using ..Methods, ..Methods.Method
 using ..Inverses
     
 
-fdef_error(f) = error("expected function definition, got\n$f")
+split_fdef_error(f) = error("expected function definition, got\n$f")
 function split_fdef(fdef::Expr)
-    (fdef.head == :function) || (fdef.head == :(=)) || fdef_error(f)
-    length(fdef.args) == 2      || fdef_error(f)
+    ((fdef.head == :function) || (fdef.head == :(=))) || split_fdef_error(f)
+    length(fdef.args) == 2      || split_fdef_error(f)
     signature, body = fdef.args
-    isexpr(signature, :call)    || fdef_error(f)
-    length(signature.args) >= 1 || fdef_error(f)
+    isexpr(signature, :call)    || split_fdef_error(f)
+    length(signature.args) >= 1 || split_fdef_error(f)
     (signature, body)
 end
-split_fdef(f::Any) = error("split_fdef: expected function definition, got\n$f")
+split_fdef(f::Any) = split_fdef_error(f)
 
 
 function recode_method(args::Vector, body)
