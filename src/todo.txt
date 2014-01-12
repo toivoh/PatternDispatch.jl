@@ -1,4 +1,8 @@
 
+Documentation
+ o Update README.md
+   o Document inverse functions
+
 User interface
  o Add a way to inspect the generated dispatch code
 
