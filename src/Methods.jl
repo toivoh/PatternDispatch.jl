@@ -83,11 +83,7 @@ function encode(mt::MethodTable)
     if mt.top.value.f === nothing
         push!(code, :( error($("No matching pattern found for $(mt.name)")) ))
     end
-    :(
-        function $(mt.name)($argsym...)
-            $(code...)            
-        end
-     )        
+    Expr(:function, :(dispatch($argsym...)), Expr(:block, code...))
 end
 
 function encode!(sink, top::MethodNode, ms::Set{MethodNode})

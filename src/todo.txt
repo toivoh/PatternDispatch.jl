@@ -3,9 +3,6 @@ Documentation
  o Update README.md
    o Document inverse functions
 
-User interface
- o Add a way to inspect the generated dispatch code
-
 Code generation
  o Exploit multiple dispatch in generated dispatch code
  o Better pivoting when building the decision tree

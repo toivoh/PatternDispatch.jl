@@ -62,6 +62,8 @@ type PatternFunction
     mt::MethodTable
     f::Function # dispatch function
 
+    dispatch_ex
+
     function PatternFunction(name::Symbol)
         f = @eval let
             $name(args...) = error($("No methods defined for pattern function $name"))
@@ -78,8 +80,9 @@ end
 
 function compile!(pf::PatternFunction)
     fdef = encode(pf.mt)
+    pf.dispatch_ex = fdef # save it here for now
     @eval let
-        const $(pf.mt.name) = $(quot(pf.f))
+        const dispatch = $(quot(pf.f))
         $fdef
     end
 end
@@ -156,7 +159,19 @@ function show_dispatch(io::IO, pf::PatternFunction)
         Base.show_unquoted(io, Expr(:function, :($mname($(method.argnames...))), method.body_ex))
         print(io,"\n\n")
     end
-    
+
+    println("# ---- Dispatch method: ----")
+    Base.show_unquoted(io, subs_qcall(mnames, pf.dispatch_ex))
+    print(io, "\n\n")
 end
+
+function subs_qcall(subs::Dict, ex)
+    if isexpr(ex, :quote)
+        get(subs, ex.args[1], ex)
+    else
+        isa(ex, Expr) ? Expr(ex.head, {subs_qcall(subs,a) for a in ex.args}...) : ex
+    end
+end
+
 
 end # module
