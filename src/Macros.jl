@@ -8,8 +8,19 @@ using Base.Meta
 using ..Patterns
 using ..Methods, ..Methods.Method
 using ..Inverses
-using Toivo.split_fdef
     
+
+fdef_error(f) = error("expected function definition, got\n$f")
+function split_fdef(fdef::Expr)
+    (fdef.head == :function) || (fdef.head == :(=)) || fdef_error(f)
+    length(fdef.args) == 2      || fdef_error(f)
+    signature, body = fdef.args
+    isexpr(signature, :call)    || fdef_error(f)
+    length(signature.args) >= 1 || fdef_error(f)
+    (signature, body)
+end
+split_fdef(f::Any) = error("split_fdef: expected function definition, got\n$f")
+
 
 function recode_method(args::Vector, body)
     pattern = :( ($(args...),) )
