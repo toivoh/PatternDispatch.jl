@@ -7,6 +7,8 @@ Code generation
  o Exploit multiple dispatch in generated dispatch code
  o Better pivoting when building the decision tree
  o Make the generated code nicer to read
+   o Pull out as many computations as possible before the if branching
+     o Make them available in either branch
  o Pull computations upward in decision tree as far as they are needed by every branch
 
 Inverse functions
