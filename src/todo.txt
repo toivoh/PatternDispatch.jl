@@ -33,7 +33,6 @@ Misc.
    - Perhaps provide a non-overloaded send!(args...) = (emit!(arg...); nothing)
  o Avoid anonymous functions
    o Main dispatch function
- o Handle new ~ AST representation
 
 
 Profound

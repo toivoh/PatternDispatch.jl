@@ -64,17 +64,17 @@ function recode_tuple!(r::Rec, nodesym::Symbol, args::Vector)
     end
 end
 
+const tilde_macro_symbol = symbol("@~")
 function recode!(r::Rec, nodesym::Symbol, ex::Expr)
     head, args = ex.head, ex.args
     nargs = length(args)
-    if head === :call && nargs >= 1
-        if args[1] === :~ && nargs == 3
-            recode!(r, nodesym, args[2])
-            recode!(r, nodesym, args[3])
-        else
-            invsym = record!(r, code_invcall(nodesym, args[1]))
-            recode_tuple!(r, invsym, args[2:end])            
-        end
+    if (head === :call && nargs == 3 && args[1] === :~) || # old AST representation of ~
+      (head === :macrocall && nargs == 3 && args[1] === tilde_macro_symbol) # new representation
+        recode!(r, nodesym, args[2])
+        recode!(r, nodesym, args[3])
+    elseif head === :call
+        invsym = record!(r, code_invcall(nodesym, args[1]))
+        recode_tuple!(r, invsym, args[2:end])            
     elseif head === :(::)
         if nargs == 1
             code_typeguard!(r, nodesym, args[1])
