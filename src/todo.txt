@@ -1,11 +1,50 @@
 
- * Add Array pattern
- * Tidy up in Dispatch.jl, move some into DecisionTree?
- * Improve show_dispatch output
-   - Nicer names for unnamed temporaries
- * Extract preparations from first predicate in code_predicate
-   - reflect in results
- * Pull computations upward in decision tree as far as they are needed
-   by every branch
- * Eliminate sure branches
+User interface
+ o Wrap into a package
+   -- As a replacement for current PatternDispatch
+ o Add a way to inspect the generated dispatch code
 
+Code generation
+ o Exploit multiple dispatch in generated dispatch code
+ o Better pivoting when building the decision tree
+ o Make the generated code nicer to read
+ o Pull computations upward in decision tree as far as they are needed by every branch
+
+Inverse functions
+ * Add @guard in inverse functions
+   o special cases for EgalGuards and TypeGuards
+ o Nicer show() for patterns with inverse functions
+ o Give nice error messages for invalid inverse functions
+ o Refer runtime errors back to inverse function specifications?
+
+Patterns
+ o Add more patterns
+   o Vector?
+ o Add more simplifications
+   o Evaluate pure functions with known inputs directly
+ 
+Test
+ o Comparison of inv-lowered patterns
+
+Misc.
+ o Merge calc! into emit!
+   - Perhaps provide a non-overloaded send!(args...) = (emit!(arg...); nothing)
+ o Avoid anonymous functions
+   o Main dispatch function
+
+
+Profound
+ o Make code generation deterministic
+ o See if we can simplify and structure the code
+
+Consider
+ o What does it mean for an inverse function to have type annotations on its arguments?
+ o Do we want to use pattern matching somewhere in inverse functions?
+ o Should inverse functions be extended to relations between arguments and output?
+   -- E.g. equal(x) would match if isequal(x, arg)
+   - Perhaps write relations between the variables using ~ etc.?
+   - Would there still be a well-defined order of execution?
+
+From the code
+ o Methods: Consider how to insert the error for non-matching pattern
+ o Parametrize reemits etc. on sink and node types
