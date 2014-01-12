@@ -1,7 +1,5 @@
 
 User interface
- o Wrap into a package
-   -- As a replacement for current PatternDispatch
  o Add a way to inspect the generated dispatch code
 
 Code generation
@@ -31,6 +29,7 @@ Misc.
    - Perhaps provide a non-overloaded send!(args...) = (emit!(arg...); nothing)
  o Avoid anonymous functions
    o Main dispatch function
+ o Handle new ~ AST representation
 
 
 Profound
