@@ -1,5 +1,5 @@
 module Methods
-export MethodTable, addmethod!
+export MethodTable, addmethod!, methodsof
 export encode
 
 import Base.>=
@@ -20,9 +20,12 @@ type Method
     f::Union(Function,Nothing)
     argnames::Vector{Symbol}
     id::Int
+    body_ex
 
-    Method(p_orig::Pattern, f, names::Vector{Symbol}) = new(p_orig, lowerinv(p_orig), f, names, 0)
-    Method(m::Method, id::Int) = new(m.p_orig, m.p, m.f, m.argnames, id)
+    function Method(p_orig::Pattern, f, names::Vector{Symbol}, body_ex)
+        new(p_orig, lowerinv(p_orig), f, names, 0, body_ex)
+    end
+    Method(m::Method, id::Int) = new(m.p_orig, m.p, m.f, m.argnames, id, m.body_ex)
 end
 
 >=(m1::Method, m2::Method) = m1.p >= m2.p
@@ -38,8 +41,10 @@ type MethodTable
     num_methods::Int
     
     MethodTable(name::Symbol) = new(name, 
-        MethodNode(Method(empty_pattern(), nothing, Symbol[])), 0)
+        MethodNode(Method(empty_pattern(), nothing, Symbol[], nothing)), 0)
 end
+
+methodsof(mt::MethodTable) = [node.value for node in subDAGof(mt.top)]
 
 function addmethod!(mt::MethodTable, m::Method)
     if nevermatches(m.p.g)
@@ -50,7 +55,7 @@ function addmethod!(mt::MethodTable, m::Method)
     m = Method(m, (mt.num_methods += 1))
     insert!(mt.top, MethodNode(m))
 
-    methods = [node.value for node in subDAGof(mt.top)]
+    methods = methodsof(mt)
     for mk in methods
         if mk === m;  continue  end
         lb = m.p.g & mk.p.g

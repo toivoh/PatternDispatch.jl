@@ -1,5 +1,6 @@
 module Macros
 export @pattern, code_pattern, @patterns, code_patterns
+export show_dispatch
 export @qmethod, code_qmethod
 
 
@@ -28,7 +29,8 @@ function recode_method(args::Vector, body)
         local pattern = $(esc(rec))
         local bodyfun = $(esc(:( function pm($(argnames...)); $body; end )))
 #        local bodyfun = $(esc(:(($(argnames...),)->$body)))
-        Method(pattern, bodyfun, $(quot(argnames)))
+        # wrap body in a tuple before quoting it; should avoid interpolation?
+        Method(pattern, bodyfun, $(quot(argnames)), $(quot((body,)))[1])
     end )
 end
 
@@ -130,5 +132,31 @@ macro pattern(fdef)
     code_pattern(fdef)
 end
 
+
+show_dispatch(f::Union(Function,PatternFunction), args...) = show_dispatch(STDOUT, f, args...)
+function show_dispatch(io::IO, f::Function, args...)
+    if !haskey(pattern_functions, f); error("$f is not a pattern function"); end
+    show_dispatch(io, pattern_functions[f], args...)
+end
+
+function show_dispatch(io::IO, pf::PatternFunction)
+    mt = pf.mt
+    println("const ", mt.name, " = (args...)->dispatch(args...)")
+
+    println("\n# ---- Pattern methods: ----")
+    methods = methodsof(mt)
+    mnames = (Function=>Symbol)[]
+    for (id, method) in sort([(m.id, m) for m in methods])
+        if method.f == nothing; continue end
+
+        println(io, "# ", mt.name, method.p_orig)
+        mname = symbol(string("match", method.id))
+        mnames[method.f] = mname
+
+        Base.show_unquoted(io, Expr(:function, :($mname($(method.argnames...))), method.body_ex))
+        print(io,"\n\n")
+    end
+    
+end
 
 end # module
