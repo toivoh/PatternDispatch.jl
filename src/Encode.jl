@@ -37,7 +37,7 @@ calc!(c::LowerTo, head::Calc, args...) = calc!(c.sink, head, args...)
 calc!(c::LowerTo, ::Arg)     = calc!(c.sink, Ex(argsym))
 calc!(c::LowerTo, s::Source) = calc!(c.sink, Ex(quot(s.value)))
 function calc!(c::LowerTo, t::TupleRef, arg)
-    calc!(c.sink,Call(tupleref),arg,source!(c,index_of(t)))
+    calc!(c.sink,Call(getindex),arg,source!(c,index_of(t)))
 end
 
 emit!(c::LowerTo, ::Never) = error("Should never have to lower Never()!")
@@ -138,7 +138,12 @@ emit!(c::MatchCode, b::Binding, arg) = push!(c.current, :( $(b.key) = $arg ))
 emit!(c::MatchCode, r::Return, arg) = push!(c.current, :( return $arg ))
 
 calc!(c::MatchCode, ex::Ex) = ex.ex
-calc!(c::MatchCode, op::Call, args...) = :($(quot(op.f))($(args...)))
+function calc!(c::MatchCode, op::Call, args...)
+    if op.f === getindex;                    Expr(:ref, args...)
+    elseif op.f === is && length(args) == 2; :( $(args[1]) === $(args[2]) )
+    else;                                    :( $(quot(op.f))($(args...)) )
+    end
+end
 
 
 
