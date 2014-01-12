@@ -88,7 +88,9 @@ end
 
 function encode!(sink, top::MethodNode, ms::Set{MethodNode})
     m = top.value
-    nodemap = reemit!(sink, m.p_orig.g)
+    # Since we emit bindings as well, it's our responsibility to make sure that they are unique.
+    # Should be enough that we use different suffixes for each pattern method.
+    nodemap = reemit!(sink, m.p_orig, "_$(m.id)")
 
     for pivot in intersect(top.gt, ms)
         sink_below = branch!(sink)

@@ -51,9 +51,9 @@ type Inst{H<:Head}
     head::H
     args::Vector{Inst}
     nrefs::Int
-    result
+    result # also store suggested name before reemit, or nothing
     function Inst(head::H, args::Inst...)
-        inst = new(head, Inst[args...], 0)
+        inst = new(head, Inst[args...], 0, nothing)
         for arg in args; arg.nrefs += 1; end
         inst
     end
@@ -70,6 +70,7 @@ immutable Branch <: Head; seq::CodeSeq; end
 branch!(c::CodeSeq) = (c2 = CodeSeq(); emit!(c, Branch(c2)); c2)
 finish!(c::CodeSeq) = nothing
 
+emit!(c::CodeSeq, b::Binding, arg::Inst) = (if arg.result === nothing; arg.result = b.key; end)
 function emit!(c::CodeSeq, head::Head, args::Inst...)
     push!(c.code, Inst(head, args...)); nothing
 end
@@ -86,7 +87,7 @@ resultof(ns::Vector{Inst}) = [n.result for n in ns]
 reemit_inst!(sink, n::Inst) = emit!(sink, n.head, resultof(n.args)...)
 function reemit_inst!{H<:Calc}(sink, n::Inst{H})
     result = calc!(sink, n.head, resultof(n.args)...)
-    if !isa(n, Inst{Ex}) && n.nrefs >= 2; n.result = record!(sink, result)
+    if !isa(n, Inst{Ex}) && n.nrefs >= 2; n.result = record!(sink, result, n.result)
     else                                  n.result = result
     end
 end
@@ -129,11 +130,9 @@ function finish!(c::MatchCode)
     c.pred = true; empty!(c.current)
 end
 
-function record!(c::MatchCode, ex)
-    sym = gensym()
-    push!(c.current, :( $sym = $ex ))
-    sym
-end
+record!(c::MatchCode, ex, ::Nothing)    = record!(c::MatchCode, ex)
+record!(c::MatchCode, ex)               = record!(c::MatchCode, ex, gensym())
+record!(c::MatchCode, ex, name::Symbol) = (push!(c.current, :( $name = $ex )); name)
 
 emit!(c::MatchCode, b::Binding, arg) = push!(c.current, :( $(b.key) = $arg ))
 emit!(c::MatchCode, r::Return, arg) = push!(c.current, :( return $arg ))
@@ -164,8 +163,8 @@ finish!(c::CachedCode) = (finish!(c.state); finish!(c.sink))
 
 resultof(c::CachedCode, node::Node) = resultof(c.state[reskey(node)])
 
-
-emit!(c::CachedCode, b::Binding, node::Node) = error("Should not emit binding to CachedCode")
+# can't keep the binding in state; shouldn't need it either
+emit!(c::CachedCode, b::Binding, node::Node) = emit!(c.sink, b, resultof(c, node))
 
 function emit!(c::CachedCode, ::EgalGuard, node1::Node, node2::Node)
     node1, node2 = primary_rep(node1), primary_rep(node2)
