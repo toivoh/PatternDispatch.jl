@@ -1,7 +1,6 @@
 module Macros
-export @patterns, code_patterns
+export @pattern, code_pattern, @patterns, code_patterns
 export @qmethod, code_qmethod
-export @pattern, code_pattern
 
 
 using Base.Meta

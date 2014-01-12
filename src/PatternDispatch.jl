@@ -14,6 +14,6 @@ include("Inverses.jl")
 include("Methods.jl")
 include("Macros.jl")
 
-using .Macros
+using .Macros: @pattern, @patterns
 
 end # module
