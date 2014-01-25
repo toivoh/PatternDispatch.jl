@@ -4,6 +4,7 @@ export @pattern, @patterns, show_dispatch
 include("Common.jl")
 include("PartialOrder.jl")
 include("Ops.jl")
+include("DAGs.jl")
 include("Nodes.jl")
 include("Graphs.jl")
 include("PatternGraphs.jl")
