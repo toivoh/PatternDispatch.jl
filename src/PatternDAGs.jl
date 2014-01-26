@@ -1,15 +1,16 @@
 module PatternDAGs
 
-export Graph, hasnode, nevermatches
-export TGof
+export Graph, nodesof, hasnode, nevermatches
+export TGof, tgkey
 
 using ..Common.Head
-using ..Ops: Calc, EgalGuard, TypeGuard, Tof, Never, Source, valueof
+using ..Ops
 import ..Common: emit!, calc!
 using ..DAGs
 
-
+argof(node::Union(Node{TypeGuard},Node{TupleRef})) = argsof(node)[1]
 tgkey(node::Node) = keyof(TypeGuard(Any), node)
+
 TGof(g, node::Node) = (key = tgkey(primary_rep(node)); haskey(g, key) ? Tof(headof(g[key])) : Any)
 
 
@@ -17,6 +18,8 @@ immutable Graph
     g::DAG
     Graph() = new(DAG())
 end
+
+nodesof(g::Graph) = values(g.g.nodes) # todo: go through DAG
 
 Base.haskey(  g::Graph, key) = haskey(g.g, key)
 Base.getindex(g::Graph, key) = g.g[key]
@@ -60,6 +63,51 @@ function simplify!(g::Graph)
         visit!(g, node)
     end    
 end
+
+
+
+# Lookup the node in g corresponding to the head and args of oldnode,
+# using map as a cache. Return nothing if there is no corresponding node in g
+function lookup(g::Graph, map::Dict{Node,Union(Node,Nothing)}, oldnode::Node)
+    if haskey(map, oldnode); return map[oldnode]; end
+
+    head = headof(oldnode)
+    args = [lookup(g, map, arg) for arg in argsof(oldnode)]
+    for arg in args
+        if arg === nothing
+            return map[oldnode] = nothing
+        end
+    end
+    key = keyof(head, args...)
+    if !haskey(g, key); return map[oldnode] = nothing; end
+    return map[oldnode] = primary_rep(g[key])
+end
+
+function <=(p::Graph, q::Graph)
+    if     nevermatches(p); return true
+    elseif nevermatches(q); return false
+    end
+
+    map = (Node=>Union(Node,Nothing))[]
+    for qnode in nodesof(q)
+        pnode = lookup(p, map, qnode)
+        if !isprimary(qnode) && ((pnode === nothing) ||
+          !(lookup(p, map, primary_rep(qnode)) === pnode))
+            return false
+        end
+        if isa(qnode, Node{TypeGuard}) &&
+          !isa(argof(qnode), Node{Source}) && (Tof(qnode) != Any) &&
+          ((pnode === nothing) || !(Tof(pnode) <: Tof(qnode)))
+            return false
+        end
+    end
+    return true
+end
+
+>=(g1::Graph, g2::Graph) = g2 <= g1
+>( g1::Graph, g2::Graph) = (g1 >= g2) && !(g2 >= g1)
+==(g1::Graph, g2::Graph) = (g1 >= g2) && (g2 >= g1)
+<( g1::Graph, g2::Graph) = g2 > g1
 
 
 end # module

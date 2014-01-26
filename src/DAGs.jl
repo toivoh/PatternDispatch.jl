@@ -1,12 +1,12 @@
 module DAGs
 
 export Node, headof, argsof, depthof, refsof
-export iskind, primary_node, active_node, live_node, merged_node
+export isprimary, iskind, primary_node, active_node, live_node, merged_node
 export keyof
 export DAG, primary_rep
 
 using ..Common.Head
-import ..Common
+import ..Common, ..Common.headof
 using ..Ops: Calc, EgalGuard, Source
 import ..Common: emit!, calc!, meet
 
@@ -52,6 +52,7 @@ usesof(node::Node)  = node.rep_or_uses::Set{Use}
 iskind(   kind::Int, node::Node) = (node.kind <= kind)
 checkkind(kind::Int, node::Node) = (@assert iskind(kind, node))
 
+isprimary(node::Node) = iskind(primary_node, node)
 primary_rep(node::Node) = getrep(primary_node, node)
 #active_rep(node::Node)  = getrep(active_node, node)
 
