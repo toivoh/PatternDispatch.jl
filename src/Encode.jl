@@ -10,9 +10,7 @@ using ..Ops
 using ..Patterns
 import ..Common: emit!, calc!, branch!, finish!, reemit!
 
-using ..Nodes
-using ..Graphs
-using ..PatternGraphs
+using ..DAGs, ..PatternDAGs
 
 
 const argsym = :args  # gensym("args")

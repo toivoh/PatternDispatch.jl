@@ -4,8 +4,7 @@ export @qpat, code_qpat, recode_pattern
 
 using Base.Meta.quot
 using ..Ops
-using ..Nodes
-using ..PatternGraphs
+using ..DAGs, ..PatternDAGs
 using ..Recode
 import ..Common: emit!, calc!, branch!, reemit!
 import Base: <=, >=, <, >, ==, &

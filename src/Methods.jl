@@ -6,7 +6,7 @@ import Base.>=
 using ..PartialOrder
 using ..Common: emit!, calc!, finish!, branch!, reemit!
 using ..Ops: Arg, Call
-using ..PatternGraphs.nevermatches
+using ..PatternDAGs.nevermatches
 using ..Patterns
 using ..Encode, ..Encode.Return
 using ..Inverses
