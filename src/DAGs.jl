@@ -1,6 +1,7 @@
 module DAGs
 
 export DAG, primary_rep
+export PatternDAG, hasnode, nevermatches
 export TGof
 
 using ..Common.Head
@@ -134,6 +135,7 @@ end
 # Substitute uses of primary node from with primary rep of node to
 function substitute!(g::DAG, kind::Int, from::Node, to::Node)
     @assert !(from === to)
+    if (kind <= active_node); push!(g.updated, from); end
     # Steal the edges from the arguments that use from, and redirect from to to
     uses = usesof(from)
     setrep!(kind, from, to)
@@ -184,9 +186,16 @@ end
 Base.haskey(  g::PatternDAG, key) = haskey(g.g, key)
 Base.getindex(g::PatternDAG, key) = g.g[key]
 
-emit!(g::PatternDAG, head::Head, args::Node...) = (emit!(g.g, head, args!); simplify!(g); nothing)
+hasnode(g::PatternDAG, head, args::Node...) = haskey(g, keyof(head, args...))
+
+function emit!(g::PatternDAG, head::Head, args::Node...)
+    if head === TypeGuard(None); never!(g); end # todo: avoid having to place it here?
+    emit!(g.g,head,args...)
+    simplify!(g)
+    nothing
+end
 function calc!(g::PatternDAG, head::Head, args::Node...)
-    node = calc!(g.g, head, args!)
+    node = calc!(g.g, head, args...)
     simplify!(g)
     primary_rep(node) # consider: do we want to take the primary_rep here? active_rep?
 end
@@ -200,12 +209,14 @@ function calc!(g::PatternDAG, head::Source)
     primary_rep(node) # consider: do we want to take the primary_rep here? active_rep?
 end
 
+nevermatches(g::PatternDAG) = hasnode(g, Never())
+
 never!(g::PatternDAG) = (emit!(g, Never()); nothing)
 
 visit!(g::PatternDAG, node::Node) = nothing
 visit!(g::PatternDAG, node::Node{TypeGuard}) = (if Tof(headof(node)) == None; never!(g); end)
 # NB: assumes all nodes that become secondary end up in updated
-visit!(g::PatternDAG, node::Node{Source}) = (if !primary_rep(node) === node; never!(g); end)
+visit!(g::PatternDAG, node::Node{Source}) = (if !(primary_rep(node) === node); never!(g); end)
 
 function simplify!(g::PatternDAG)
     while !isempty(g.g.updated)

@@ -83,4 +83,34 @@ emit!(g, EgalGuard(), x, y)
 @assert TGof(g, x) == Matrix{Int}
 
 
+g = PatternDAG()
+t = calc!(g, Arg())
+@assert !nevermatches(g)
+emit!(g, TypeGuard(None), t)
+@assert nevermatches(g)
+
+g = PatternDAG()
+t = calc!(g, Arg())
+emit!(g, TypeGuard(Real), t)
+@assert !nevermatches(g)
+emit!(g, TypeGuard(String), t)
+@assert nevermatches(g)
+
+g = PatternDAG()
+s1 = calc!(g, Source(1))
+s2 = calc!(g, Source(2))
+@assert !nevermatches(g)
+emit!(g, EgalGuard(), s1, s2)
+@assert nevermatches(g)
+
+g = PatternDAG()
+s = calc!(g, Source(1))
+@assert TGof(g, s) == Int
+
+g = PatternDAG()
+s = calc!(g, Source(1))
+@assert !nevermatches(g)
+emit!(g, TypeGuard(String), s)
+@assert nevermatches(g)
+
 end
