@@ -110,11 +110,11 @@ function show_pattern(sh::PShow, node::Node)
         end
     end
 
-    for (k,ref) in refsof(node)
-        if !(ref in sh.shown)
-            res = show_pattern(sh, tilde, ref, node)
+    for (user,k) in usesof(node)
+        if !(user in sh.shown)
+            res = show_pattern(sh, tilde, user, node)
             if res >= 1
-                push!(sh.shown, ref)
+                push!(sh.shown, user)
                 if res == 2; tilde = true; end
             end
         end

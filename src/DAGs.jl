@@ -1,6 +1,6 @@
 module DAGs
 
-export Node, headof, argsof, depthof, refsof
+export Node, headof, argsof, depthof, usesof
 export isprimary, iskind, primary_node, active_node, live_node, merged_node
 export keyof
 export DAG, primary_rep
