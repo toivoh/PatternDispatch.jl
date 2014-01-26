@@ -5,7 +5,7 @@ export TGof, tgkey
 
 using ..Common.Head
 using ..Ops
-import ..Common: emit!, calc!
+import ..Common: emit!, calc!, branch!, reemit!
 using ..DAGs
 
 argof(node::Union(Node{TypeGuard},Node{TupleRef})) = argsof(node)[1]
@@ -25,6 +25,8 @@ Base.haskey(  g::Graph, key) = haskey(g.g, key)
 Base.getindex(g::Graph, key) = g.g[key]
 
 hasnode(g::Graph, head, args::Node...) = haskey(g, keyof(head, args...))
+
+branch!(g::Graph) = (g2 = Graph(); reemit!(g2, g); g2)
 
 function emit!(g::Graph, head::Head, args::Node...)
     if head === TypeGuard(None); never!(g); end # todo: avoid having to place it here?
@@ -108,6 +110,48 @@ end
 >( g1::Graph, g2::Graph) = (g1 >= g2) && !(g2 >= g1)
 ==(g1::Graph, g2::Graph) = (g1 >= g2) && (g2 >= g1)
 <( g1::Graph, g2::Graph) = g2 > g1
+
+
+>=(g1::Graph, g2::Graph) = g2 <= g1
+>( g1::Graph, g2::Graph) = (g1 >= g2) && !(g2 >= g1)
+==(g1::Graph, g2::Graph) = (g1 >= g2) && (g2 >= g1)
+<( g1::Graph, g2::Graph) = g2 > g1
+
+(&)(g1::Graph, g2::Graph) = (g = Graph(); reemit!(g, g1); reemit!(g, g2); g)
+
+
+immutable Reemit
+    dest
+    g::Graph
+    map::Dict{Node, Any} # todo: provide type info about results?
+    Reemit(dest, g::Graph) = new(dest, g, (Node=>Any)[])
+end
+
+function reemit!(dest, g::Graph)
+    em = Reemit(dest, g)
+    for node in nodesof(g); reemit_node!(em, node); end
+    em.map
+end
+
+function reemit_node!(em::Reemit, node::Node)
+    if haskey(em.map, node); return em.map[node]; end
+
+    args = [reemit_node!(em, arg) for arg in argsof(node)]
+    result = em.map[node] = reemit_node!(em.dest, headof(node), args)
+
+    if !isprimary(node)
+        emit!(em.dest, EgalGuard(), result, reemit_node!(em, primary_rep(node)))
+    end
+
+    # Make sure that node's TypeGuard is emitted right after it
+    key = tgkey(node)
+    if haskey(em.g, key); reemit_node!(em, em.g[key]); end
+
+    result
+end
+
+reemit_node!(dest, head::Head, args) = (emit!(dest, head, args...); nothing)
+reemit_node!(dest, head::Calc, args) = calc!(dest, head, args...)
 
 
 end # module
