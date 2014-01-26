@@ -39,8 +39,7 @@ end
 
 g = DAG()
 t = calc!(g, Arg())
-n = 3
-args = [calc!(g, TupleRef(k)) for k=1:n]
+args = [calc!(g, TupleRef(k)) for k=1:3]
 d12 = calc!(g, Call(-), args[1], args[2])
 d13 = calc!(g, Call(-), args[1], args[3])
 d21 = calc!(g, Call(-), args[2], args[1])
@@ -54,6 +53,16 @@ emit!(g, EgalGuard(), args[1], args[2])
 @assert primary_eq(d12, d13)
 @assert primary_eq(d12, d21)
 @assert !primary_eq(d12, args[1])
+
+
+g = DAG()
+t = calc!(g, Arg())
+args = [calc!(g, TupleRef(k)) for k=1:4]
+s = [calc!(g, Call(sin), args[k]) for k=1:4]
+emit!(g, EgalGuard(), s[1], s[2])
+emit!(g, EgalGuard(), s[3], s[4])
+emit!(g, EgalGuard(), args[1], args[3])
+@assert primary_eq(s[1], s[4])
 
 
 g = DAG()

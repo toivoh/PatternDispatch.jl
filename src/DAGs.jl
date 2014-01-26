@@ -132,6 +132,7 @@ function emit!(g::DAG, ::EgalGuard, n1::Node, n2::Node)
 end
 
 # Substitute uses of node from with primary rep of node to
+# Assumes that from is primary
 function substitute!(g::DAG, kind::Int, from::Node, to::Node)
     to = primary_rep(to)
     @assert !(from === to)
@@ -157,7 +158,14 @@ function substitute!(g::DAG, kind::Int, from::Node, to::Node)
             merge_node!(g, key, headof(user))
             # Delete edges from user, since we take it out of the DAG
             for (l,arg) in enumerate(argsof(user)); deluse!(arg, (l,user)); end
-            substitute!(g, merged_node, user, user0)
+            # Substitute user if it is primary; otherwise merge the equivalence classes
+            rep = primary_rep(user)
+            if rep === user
+                substitute!(g, merged_node, user, user0)
+            else
+                setrep!(merged_node, user, user0)
+                emit!(g, EgalGuard(), rep, user0)
+            end
         else
             g.nodes[key] = user # store at new key
             push!(g.updated, user)
