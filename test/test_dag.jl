@@ -39,6 +39,25 @@ end
 
 g = DAG()
 t = calc!(g, Arg())
+n = 3
+args = [calc!(g, TupleRef(k)) for k=1:n]
+d12 = calc!(g, Call(-), args[1], args[2])
+d13 = calc!(g, Call(-), args[1], args[3])
+d21 = calc!(g, Call(-), args[2], args[1])
+@assert !primary_eq(d12, d13)
+@assert !primary_eq(d12, d21)
+@assert !primary_eq(d13, d21)
+emit!(g, EgalGuard(), args[2], args[3])
+@assert primary_eq(d12, d13)
+@assert !primary_eq(d12, d21)
+emit!(g, EgalGuard(), args[1], args[2])
+@assert primary_eq(d12, d13)
+@assert primary_eq(d12, d21)
+@assert !primary_eq(d12, args[1])
+
+
+g = DAG()
+t = calc!(g, Arg())
 emit!(g, TypeGuard(Matrix), t)
 emit!(g, TypeGuard(Array{Int}), t)
 @assert TGof(g, t) == Matrix{Int}
