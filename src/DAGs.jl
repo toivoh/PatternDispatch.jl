@@ -131,45 +131,43 @@ function emit!(g::DAG, ::EgalGuard, n1::Node, n2::Node)
     nothing
 end
 
-# Substitute uses of node from with primary rep of node to
-# Assumes that from is primary
+# Substitute uses of primary node from with primary rep of node to
 function substitute!(g::DAG, kind::Int, from::Node, to::Node)
-    to = primary_rep(to)
     @assert !(from === to)
-    
     # Steal the edges from the arguments that use from, and redirect from to to
     uses = usesof(from)
     setrep!(kind, from, to)
+    for (k,user) in uses; substitute_use!(g, k, user, to); end    
+end
 
-    # substitute uses of from for to
-    for (k,user) in uses
-        if !iskind(live_node, user); continue; end # The edge was already taken out of the DAG
-        to = primary_rep(to)
+function substitute_use!(g::DAG, k::Int, user::Node, to::Node)
+    if !iskind(live_node, user); return; end # The edge was already taken out of the DAG
+    to = primary_rep(to)
 
-        removed = pop!(g.nodes, keyof(user)); @assert removed === user # remove at old key
-        user.args[k] = to      # update argument
-        adduse!(to, (k,user)) # Give edge to to; substitute! will not use it anymore
-        # Try to store user at the new key
-        key = keyof(user)
-        if haskey(g.nodes, key)
-            # Couldn't store user at the new key, so remove it from the DAG instead
-            user0 = g.nodes[key]
-            user0.depth = min(user0.depth, user.depth) # update depth of collided node
-            merge_node!(g, key, headof(user))
-            # Delete edges from user, since we take it out of the DAG
-            for (l,arg) in enumerate(argsof(user)); deluse!(arg, (l,user)); end
-            # Substitute user if it is primary; otherwise merge the equivalence classes
-            rep = primary_rep(user)
-            if rep === user
-                substitute!(g, merged_node, user, user0)
-            else
-                setrep!(merged_node, user, user0)
-                emit!(g, EgalGuard(), rep, user0)
-            end
+    removed = pop!(g.nodes, keyof(user)); @assert removed === user # remove at old key
+    user.args[k] = to      # update argument
+    adduse!(to, (k,user)) # Give edge to to; substitute! will not use it anymore
+
+    # Try to store user at the new key
+    key = keyof(user)
+    if haskey(g.nodes, key)
+        # Couldn't store user at the new key, so remove it from the DAG instead
+        user0 = g.nodes[key]
+        user0.depth = min(user0.depth, user.depth) # update depth of collided node
+        merge_node!(g, key, headof(user))
+        # Delete edges from user, since we take it out of the DAG
+        for (l,arg) in enumerate(argsof(user)); deluse!(arg, (l,user)); end
+        # Substitute user if it is primary; otherwise merge the equivalence classes
+        rep = primary_rep(user)
+        if rep === user
+            substitute!(g, merged_node, user, user0)
         else
-            g.nodes[key] = user # store at new key
-            push!(g.updated, user)
+            setrep!(merged_node, user, user0)
+            emit!(g, EgalGuard(), rep, user0)
         end
+    else
+        g.nodes[key] = user # store at new key
+        push!(g.updated, user)
     end
 end
 
