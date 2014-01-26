@@ -15,8 +15,8 @@ const active_node  = 1  # Egal guard to rep
 const live_node    = 2  # Replaced by rep
 const merged_node  = 3  # Redirects to another node with same key; node is not in the DAG
 
-type Node
-    head::Head
+type Node{H<:Head}
+    head::H
     args::Vector{Node}
 
     depth::Int
@@ -24,7 +24,7 @@ type Node
     kind::Int
     rep_or_uses::Union(Set{(Int,Node)}, Node) # Set if kind == primary_node, Node otherwise
 
-    function Node(head::Head, args::Node...)
+    function Node(head::H, args::Node...)
         args = Node[args...]
         depth = length(args)==0 ? 0 : maximum([depthof(arg) for arg in args])+1        
         node = new(head, args, depth, primary_node, Set{(Int,Node)}())
@@ -32,6 +32,7 @@ type Node
         node
     end
 end
+Node{H}(head::H, args...) = Node{H}(head, args...)
 
 typealias Use (Int,Node)
 
