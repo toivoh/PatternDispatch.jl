@@ -37,4 +37,22 @@ for k=1:n, l=1:n
 end
 
 
+g = DAG()
+t = calc!(g, Arg())
+emit!(g, TypeGuard(Matrix), t)
+emit!(g, TypeGuard(Array{Int}), t)
+@assert TGof(g, t) == Matrix{Int}
+
+
+g = DAG()
+t = calc!(g, Arg())
+x, y = calc!(g, TupleRef(1), t), calc!(g, TupleRef(2), t)
+emit!(g, TypeGuard(Matrix),     x)
+emit!(g, TypeGuard(Array{Int}), y)
+@assert TGof(g, x) == Matrix
+@assert TGof(g, y) == Array{Int}
+emit!(g, EgalGuard(), x, y)
+@assert TGof(g, x) == Matrix{Int}
+
+
 end

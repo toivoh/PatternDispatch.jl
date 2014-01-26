@@ -1,11 +1,12 @@
 module DAGs
 
 export DAG, primary_rep
+export TGof
 
 using ..Common.Head
 import ..Common
-using ..Ops: Calc, EgalGuard
-import ..Common: emit!, calc!
+using ..Ops: Calc, EgalGuard, TypeGuard, Tof
+import ..Common: emit!, calc!, meet
 
 
 # Kinds (node.kind) for the replacement node (node.rep)
@@ -51,8 +52,11 @@ checkkind(kind::Int, node::Node) = (@assert iskind(kind, node))
 primary_rep(node::Node) = getrep(primary_node, node)
 #active_rep(node::Node)  = getrep(active_node, node)
 
+headkey(head::Head) = Common.keyof(head)
+headkey(head::Calc) = head
+
 keyof(node::Node) = keyof(node.head, node.args...)
-keyof(head::Head, args::Node...) = tuple(head, args...)
+keyof(head::Head, args::Node...) = tuple(headkey(head), args...)
 
 
 adduse!(node::Node, u::Use) = (push!(  usesof(node), u); nothing)
@@ -94,11 +98,24 @@ type DAG
     DAG() = new(ObjectIdDict(), Set{Node}())
 end
 
+Base.haskey(  g::DAG, key) = haskey(g.nodes, key)
+Base.getindex(g::DAG, key) = g.nodes[key]
+
+merge_node!(g::DAG, key, head::Calc) = g.nodes[key]
+function merge_node!(g::DAG, key, head::Head)
+    node = g.nodes[key]
+    h0, k0 = node.head, headkey(node.head)
+    node.head = meet(node.head, head)
+    @assert headkey(node.head) === k0
+    if !(node.head === h0); push!(g.updated, node); end
+    node
+end
+
 emit!(g::DAG, head::Head, args::Node...) = (calc!(g, head, args...); nothing)
 function calc!(g::DAG, head::Head, args::Node...)
     args = Node[primary_rep(arg) for arg in args]
     key = keyof(head, args...)
-    haskey(g.nodes, key) ? g.nodes[key] : (g.nodes[key] = Node(head, args...))
+    haskey(g.nodes, key) ? merge_node!(g, key, head) : (g.nodes[key] = Node(head, args...))
 end
 
 # todo: would be nice not to have to define these two:
@@ -129,15 +146,16 @@ function substitute!(g::DAG, kind::Int, from::Node, to::Node)
 
         removed = pop!(g.nodes, keyof(user)); @assert removed === user # remove at old key
         user.args[k] = to      # update argument
-        adduser!(to, (k,user)) # Give edge to to; substitute! will not use it anymore
+        adduse!(to, (k,user)) # Give edge to to; substitute! will not use it anymore
         # Try to store user at the new key
         key = keyof(user)
         if haskey(g.nodes, key)
             # Couldn't store user at the new key, so remove it from the DAG instead
             user0 = g.nodes[key]
             user0.depth = min(user0.depth, user.depth) # update depth of collided node
+            merge_node!(g, key, headof(user))
             # Delete edges from user, since we take it out of the DAG
-            for (l,arg) in enumerate(argsof(user)); deluser!(arg, (l,user)); end
+            for (l,arg) in enumerate(argsof(user)); deluse!(arg, (l,user)); end
             substitute!(g, merged_node, user, user0)
         else
             g.nodes[key] = user # store at new key
@@ -145,6 +163,10 @@ function substitute!(g::DAG, kind::Int, from::Node, to::Node)
         end
     end
 end
+
+
+tgkey(node::Node) = keyof(TypeGuard(Any), node)
+TGof(g, node::Node) = (key = tgkey(primary_rep(node)); haskey(g, key) ? Tof(headof(g[key])) : Any)
 
 
 end # module
