@@ -128,6 +128,7 @@ function emit!(g::DAG, ::EgalGuard, n1::Node, n2::Node)
     n1, n2 = primary_rep(n1), primary_rep(n2)
     if n1 === n2; return; end
     from, to = depthof(n1) >= depthof(n2) ? (n1, n2) : (n2, n1)
+    if isa(from, Source); from, to = to, from; end # Prioritize source nodes
     substitute!(g, active_node, from, to)
     nothing
 end
