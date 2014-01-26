@@ -22,19 +22,19 @@ type Node{H<:Head}
     depth::Int
 
     kind::Int
-    rep_or_uses::Union(Set{(Int,Node)}, Node) # Set if kind == primary_node, Node otherwise
+    rep_or_uses::Union(Set{(Node,Int)}, Node) # Set if kind == primary_node, Node otherwise
 
     function Node(head::H, args::Node...)
         args = Node[args...]
         depth = length(args)==0 ? 0 : maximum([depthof(arg) for arg in args])+1        
-        node = new(head, args, depth, primary_node, Set{(Int,Node)}())
-        for (k,arg) in enumerate(args); adduse!(arg, (k,node)); end
+        node = new(head, args, depth, primary_node, Set{(Node,Int)}())
+        for (k,arg) in enumerate(args); adduse!(arg, (node,k)); end
         node
     end
 end
 Node{H}(head::H, args...) = Node{H}(head, args...)
 
-typealias Use (Int,Node)
+typealias Use (Node,Int)
 
 function Base.show(io::IO, node::Node)
     print(io, "Node(", headof(node), ", ")
@@ -137,16 +137,16 @@ function substitute!(g::DAG, kind::Int, from::Node, to::Node)
     # Steal the edges from the arguments that use from, and redirect from to to
     uses = usesof(from)
     setrep!(kind, from, to)
-    for (k,user) in uses; substitute_use!(g, k, user, to); end    
+    for (user,k) in uses; substitute_use!(g, user, k, to); end    
 end
 
-function substitute_use!(g::DAG, k::Int, user::Node, to::Node)
+function substitute_use!(g::DAG, user::Node, k::Int, to::Node)
     if !iskind(live_node, user); return; end # The edge was already taken out of the DAG
     to = primary_rep(to)
 
     removed = pop!(g.nodes, keyof(user)); @assert removed === user # remove at old key
-    user.args[k] = to      # update argument
-    adduse!(to, (k,user)) # Give edge to to; substitute! will not use it anymore
+    user.args[k] = to     # update argument
+    adduse!(to, (user,k)) # Give edge to to; substitute! will not use it anymore
 
     # Try to store user at the new key
     key = keyof(user)
@@ -156,7 +156,7 @@ function substitute_use!(g::DAG, k::Int, user::Node, to::Node)
         user0.depth = min(user0.depth, user.depth) # update depth of collided node
         merge_node!(g, key, headof(user))
         # Delete edges from user, since we take it out of the DAG
-        for (l,arg) in enumerate(argsof(user)); deluse!(arg, (l,user)); end
+        for (l,arg) in enumerate(argsof(user)); deluse!(arg, (user,l)); end
         # Substitute user if it is primary; otherwise merge the equivalence classes
         rep = primary_rep(user)
         if rep === user
