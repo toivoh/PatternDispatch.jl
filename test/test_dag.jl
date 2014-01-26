@@ -1,6 +1,6 @@
 module TestDAG
 
-using PatternDispatch: Ops, DAGs
+using PatternDispatch: Ops, DAGs, PatternDAGs
 using PatternDispatch.Common: emit!, calc!
 
 primary_eq(x, y) = primary_rep(x) === primary_rep(y)
