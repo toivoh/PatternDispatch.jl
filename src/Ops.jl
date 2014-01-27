@@ -20,7 +20,7 @@ immutable Arg      <: Calc; end
 immutable Source   <: Calc; value;  end
 immutable TupleRef <: Calc; k::Int; end
 immutable Call     <: Calc; f::Base.Callable; end
-immutable Inv      <: Calc; f::Base.Callable; end
+immutable Inv      <: Calc; f::Base.Callable; nargs::Int; end
 
 immutable Never     <: Guard; end
 immutable EgalGuard <: Guard; end

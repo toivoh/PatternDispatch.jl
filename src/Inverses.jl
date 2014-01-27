@@ -47,7 +47,7 @@ function code_invdef(invsig, body)
             $qfinish!($sinksym)
             $sinksym
         end)))
-        setinverse($(esc(fname)), nodeseq)
+        setinverse($(esc(fname)), $(length(fargs)), nodeseq)
         nothing
     end
 end
@@ -96,13 +96,13 @@ function reemit!(sink, seq::NodeSeq, argnode)
 end
 
 
-const inverses = Dict{Base.Callable, NodeSeq}()
+const inverses = Dict{(Base.Callable, Int), NodeSeq}()
 
-function setinverse(f::Base.Callable, nodeseq::NodeSeq)
-    if haskey(inverses, f)
-        println("Warning: replacing definition of (pattern) inverse function for function $f")
+function setinverse(f::Base.Callable, nargs::Int, nodeseq::NodeSeq)
+    if haskey(inverses, (f, nargs))
+        println("Warning: replacing definition of (pattern) inverse function for function $f with $nargs arguments")
     end
-    inverses[f] = nodeseq
+    inverses[(f, nargs)] = nodeseq
 end
 
 
@@ -119,8 +119,10 @@ calc!(c::LowerInv, head::Calc, args...) = calc!(c.sink, head, args...)
 
 calc!(c::LowerInv, head::Inv, args...) = error("Inv takes a single argument")
 function calc!(c::LowerInv, head::Inv, arg)
-    if !haskey(inverses, head.f); error("No inverse function defined for $(head.f)"); end
-    results = reemit!(c.sink, inverses[head.f]::NodeSeq, arg)
+    if !haskey(inverses, (head.f, head.nargs))
+        error("No inverse function defined for $(head.f) with $(head.nargs) arguments")
+    end
+    results = reemit!(c.sink, inverses[(head.f, head.nargs)]::NodeSeq, arg)
     results[:args]
 end
 

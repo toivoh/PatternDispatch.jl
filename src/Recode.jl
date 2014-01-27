@@ -9,14 +9,14 @@ using ..Ops
 const sinksym = gensym("sink")
 
 
-const qemit!, qcalc!, qfinish!, qArg, qSource, qTupleRef, qCall, qInv, qBinding, qEgalGuard, qTypeGuard, qgetfield, qtuple = map(quot, (emit!, calc!, finish!, Arg, Source, TupleRef, Call, Inv, Binding, EgalGuard, TypeGuard, getfield, tuple))
+const qemit!, qcalc!, qfinish!, qArg, qSource, qTupleRef, qCall, qInv, qBinding, qEgalGuard, qTypeGuard, qgetfield, qtuple, qgetindex = map(quot, (emit!, calc!, finish!, Arg, Source, TupleRef, Call, Inv, Binding, EgalGuard, TypeGuard, getfield, tuple, getindex))
 
 
 sourcenode(valueex) = :( $qcalc!($sinksym, $qSource($valueex)) )
 
 code_arg() = :( $qcalc!($sinksym, $qArg()) )
 code_tupleref(nodesym::Symbol, k::Int) = :( $qcalc!($sinksym, $qTupleRef($k), $nodesym) )
-code_invcall(nodesym::Symbol, fex) = :( $qcalc!($sinksym, $qInv($fex), $nodesym) )
+code_invcall(nodesym::Symbol, fex, nargs::Int) = :( $qcalc!($sinksym, $qInv($fex, $nargs), $nodesym) )
 
 code_bind(nodeex, key::Symbol) = :( $qemit!($sinksym, $qBinding($(quot(key))), $nodeex) )
 code_equate(nex1,nex2) = :( $qemit!($sinksym, $qEgalGuard(), $nex1, $nex2) )
@@ -73,7 +73,7 @@ function recode!(r::Rec, nodesym::Symbol, ex::Expr)
         recode!(r, nodesym, args[2])
         recode!(r, nodesym, args[3])
     elseif head === :call
-        invsym = record!(r, code_invcall(nodesym, args[1]))
+        invsym = record!(r, code_invcall(nodesym, args[1], nargs-1))
         recode_tuple!(r, invsym, args[2:end])            
     elseif head === :(::)
         if nargs == 1
@@ -132,6 +132,8 @@ function recodeinv(vars::Set{Symbol}, ex::Expr)
         return code_equate(pred, sourcenode(true))
     elseif head === :(.) && nargs == 2
         return recodeinv(vars, :( $qgetfield($(args...)) ))
+    elseif head === :ref && nargs >= 2
+        return recodeinv(vars, :( $qgetindex($(args...)) ))
     elseif head === :tuple
         return recodeinv(vars, :( $qtuple($(args...)) ))
     elseif head === :call && nargs >= 1
