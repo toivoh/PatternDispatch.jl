@@ -14,7 +14,7 @@ Code generation
 Inverse functions
  * Add @guard in inverse functions
    o special cases for EgalGuards and TypeGuards
- o Nicer show() for patterns with inverse functions
+ o Nicer/safer show() for patterns with inverse functions
  o Give nice error messages for invalid inverse functions
  o Refer runtime errors back to inverse function specifications?
 

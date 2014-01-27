@@ -158,10 +158,9 @@ function show_pattern(sh::PShow, tilde::Bool, node::Node{Inv}, arg::Node)
     if !(arg === argsof(node)[1]); return 0; end
 
     if tilde; print(sh.io, '~'); end
-    # todo: nicer way to print inverse functions
-    print(sh.io, headof(node).f, "( (")
+    # todo: safer way to print inverse functions nicely
+    print(sh.io, headof(node).f)
     show_pattern(sh, node)
-    print(sh.io, ")... )")
     return 2
 end
 
