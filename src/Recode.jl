@@ -121,6 +121,10 @@ function recodeinv(vars::Set{Symbol}, ex::Expr)
     nargs = length(args)
     if head === :(::) && nargs == 2
         return code_typeguard(recodeinv(vars,args[1]), args[2])
+    elseif (head === :call && nargs == 3 && args[1] === :~) || # old AST representation of ~
+      (head === :macrocall && nargs == 3 && args[1] === tilde_macro_symbol) # new representation
+        # todo: make it return the value as well (egalguard())
+        return code_equate(recodeinv(vars,args[2]), recodeinv(vars,args[3]))
     elseif head === :(=) && nargs == 2
         if !isa(args[1], Symbol)
             error("Unsupported lhs in inverse function, in ex = $ex")
