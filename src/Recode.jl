@@ -88,6 +88,8 @@ function recode!(r::Rec, nodesym::Symbol, ex::Expr)
         recode_tuple!(r, nodesym, args)
     elseif head === :$ && nargs == 1
         push!(r.code, code_equate(nodesym, sourcenode(args[1])))
+    elseif head === :quote
+        push!(r.code, code_equate(nodesym, sourcenode(ex)))
     else
         error("recode: Unrecognized expr = ", ex)
     end    
