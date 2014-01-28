@@ -164,8 +164,6 @@ CachedCode(sink) = CachedCode(sink, Graph())
 branch!(c::CachedCode) = CachedCode(branch!(c.sink), branch!(c.state))
 finish!(c::CachedCode) = (finish!(c.state); finish!(c.sink))
 
-resultof(c::CachedCode, node::Node) = resultof(c.state[reskey(node)])
-
 # can't keep the binding in state; shouldn't need it either
 emit!(c::CachedCode, b::Binding, node::Node) = emit!(c.sink, b, resultof(c, node))
 
@@ -185,6 +183,12 @@ function emit!(c::CachedCode, t::TypeGuard, node::Node)
     emit!(c.sink,  TypeGuard(T), resultof(c, node))
     emit!(c.state, TypeGuard(T), node)
     nothing
+end
+
+function resultof(c::CachedCode, node::Node)
+    key = reskey(primary_rep(node))
+    if !haskey(c.state, key); node = calc!(c, node.head, node.args...); end
+    resultof(c.state[key])
 end
 
 function calc!(c::CachedCode, head::Calc, args::Node...)
