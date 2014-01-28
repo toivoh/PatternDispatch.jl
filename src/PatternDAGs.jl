@@ -36,6 +36,10 @@ function emit!(g::Graph, head::Head, args::Node...)
 end
 function calc!(g::Graph, head::Head, args::Node...)
     node = calc!(g.g, head, args...)
+    # todo: better place for this?
+    if head == Call(tuple)
+        emit!(g.g, TypeGuard(NTuple{length(args)}), node)
+    end
     simplify!(g)
     primary_rep(node) # consider: do we want to take the primary_rep here? active_rep?
 end
@@ -85,6 +89,15 @@ function lookup(g::Graph, map::Dict{Node,Union(Node,Nothing)}, oldnode::Node)
     return map[oldnode] = primary_rep(g[key])
 end
 
+function isimplied(node::Node{TypeGuard})
+    T = Tof(node)
+    if T == Any; return true; end
+    arg = argof(node)
+    if isa(arg, Node{Source}); return true; end
+    if headof(arg) === Call(tuple) && NTuple{length(argsof(arg))} <: T; return true; end
+    false
+end
+
 function <=(p::Graph, q::Graph)
     if     nevermatches(p); return true
     elseif nevermatches(q); return false
@@ -98,7 +111,7 @@ function <=(p::Graph, q::Graph)
             return false
         end
         if isa(qnode, Node{TypeGuard}) &&
-          !isa(argof(qnode), Node{Source}) && (Tof(qnode) != Any) &&
+          !isimplied(qnode) &&
           ((pnode === nothing) || !(Tof(pnode) <: Tof(qnode)))
             return false
         end
