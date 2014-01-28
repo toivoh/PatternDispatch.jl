@@ -110,13 +110,11 @@ function show_pattern(sh::PShow, node::Node)
         end
     end
 
+    push!(sh.shown, node)
+
     for (user,k) in usesof(node)
         if !(user in sh.shown)
-            res = show_pattern(sh, tilde, user, node)
-            if res >= 1
-                push!(sh.shown, user)
-                if res == 2; tilde = true; end
-            end
+            tilde = bool(tilde | show_pattern(sh, tilde, user, node))
         end
     end
 
@@ -124,13 +122,12 @@ function show_pattern(sh::PShow, node::Node)
         if tilde; print(sh.io,'~'); end
         show(sh.io, valueof(node))
     end
-
-    push!(sh.shown, node)
 end
 
 function show_pattern(sh::PShow, tilde::Bool, node::Node{TypeGuard}, arg::Node)
+    push!(sh.shown, node)
     T = Tof(node)
-    if isa(arg, Node{Source}) && T != None; return 1; end
+    if isa(arg, Node{Source}) && T != None; return false; end
     printT = true
 
     if isa(T, Tuple) && !(T[length(T)] <: Vararg)
@@ -149,19 +146,20 @@ function show_pattern(sh::PShow, tilde::Bool, node::Node{TypeGuard}, arg::Node)
         print(sh.io, ')')            
     end
     if printT; print(sh.io, "::", T); end
-    return 2
+    return true
 end
 
 show_pattern(sh::PShow, tilde::Bool, node::Node{TupleRef}, arg::Node) = 0
 
 function show_pattern(sh::PShow, tilde::Bool, node::Node{Inv}, arg::Node)
-    if !(arg === argsof(node)[1]); return 0; end
+    if !(arg === argsof(node)[1]); return false; end
 
+    push!(sh.shown, node)
     if tilde; print(sh.io, '~'); end
     # todo: safer way to print inverse functions nicely
     print(sh.io, headof(node).f)
     show_pattern(sh, node)
-    return 2
+    return true
 end
 
 
