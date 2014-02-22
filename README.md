@@ -16,11 +16,7 @@ Examples
 --------
 Pattern methods are defined using the `@pattern` macro. The method with the most specific pattern that matches the given arguments is invoked, 
 with matching values assigned to the corresponding variables.
-The pattern method that is invoked is guaranted to be no less specific than
-any other pattern method that matches. 
-Beyond that, no guarantees are made whatsoever about which method is invoked,
-i.e. in the face of ambiguity, any of the most specific methods may be picked
-at any given invocation.
+(Among the matching pattern methods, any one that is no less specific than the others may be picked - this will be unique as long as you don't get any ambiguity warnings.)
 
 Method signatures in pattern methods may contain variable names and/or
 type assertions, just like regular method signatures.
@@ -42,54 +38,57 @@ prints
 Using `show_dispatch(f)` to inspect the generated dispatch code gives
 
     const f = (args...)->dispatch(args...)
-
+    
     # ---- Pattern methods: ----
     # f(x,)
-    function match1(x)	#  test_examples.jl, line 6:
+    function match1(x) # test_examples.jl, line 6:
         x
     end
-
+    
     # f(2,)
-    function match2()	#  test_examples.jl, line 7:
+    function match2() # test_examples.jl, line 7:
         42
     end
-
-    # ---- Dispatch methods: ----
-    function dispatch(x_1::Any)
-        match1(x_1)
-    end
-
-    function dispatch(x_1::Int64)
-        if is(x_1, 2)
-            match2()
-        else
-            match1(x_1)
+    
+    # ---- Dispatch method: ----
+    function dispatch(args...)
+        if isa(args,(Any,))
+            x_1 = args[1]
+            if (x_1===2)
+                return match2()
+            end
+            return match1(x_1)
         end
+        error("No matching pattern found for f")
     end
 
+<!---
 A type tuple is allowed as a second argument to `show_dispatch` to restrict
 the set of dispatch methods printed,
 e.g. `show_dispatch(f, (Int,))` prints only the second method, since the first 
 one can never be triggered with an argument of type `Int`.
+-->
 
-Signatures can also contain patterns of tuples and vectors:
+Signatures can also contain patterns of tuples<!--- and vectors -->:
 
     @pattern f2((x,y::Int)) = x*y
-    @pattern f2([x,y::Int]) = x/y
     @pattern f2(x)          = nothing
 
     ==> f2((2,5)) = 10
         f2((4,3)) = 12
-        f2([4,3]) = 1.3333333333333333
         f2((4,'a')) = f2({4,'a'}) = f2(1) = f2("hello") = f2((1,)) = f2((1,2,3)) = nothing
 
+<!---
 A vector pattern will match any `Vector`. To restrict to a given
 element type, use e.g.
 
     @pattern f([x,y]::Vector{Int}) = ...
+-->
 
 The pattern `p~q` matches a value if and only if 
 it matches both patterns `p` and `q`.
+
+<!---
 This can be used e.g. to get at the actual vector that matched a vector pattern:
 
     @pattern f3(v~[x::Int, y::Int]) = {v,x*y}
@@ -97,6 +96,7 @@ This can be used e.g. to get at the actual vector that matched a vector pattern:
     ==> f3([3,2])   = {[3, 2], 6}
         f3({3,2})   = {{3, 2}, 6}
         f3([3,2.0]) = nothing
+-->
 
 Symbols in signatures are replaced by pattern variables by default
 (symbols in the position of function names and at the right hand side of `::`
