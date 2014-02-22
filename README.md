@@ -102,6 +102,7 @@ it matches both patterns `p` and `q`.
 This can be used e.g. to get at the actual vector that matched a vector pattern:
 
     @pattern f3(v~[x::Int, y::Int]) = {v,x*y}
+    @pattern f3(v) = nothing
 
     ==> f3([3,2])   = {[3, 2], 6}
         f3({3,2})   = {{3, 2}, 6}
