@@ -16,6 +16,12 @@ unordered(x,y) = !(x >= y || y >= x)
 @assert unordered((@qpat (x::Int,y)), (@qpat (x,y::Int)))
 @assert (@qpat (x::Number,y)) > (@qpat (x::Int,y::Int))
 
+@assert (@qpat x) > (@qpat [x,y])
+@assert unordered((@qpat x::Int), (@qpat [x,y]))
+#@assert (@qpat [x,y]::Number) == (@qpat ::None) # need to pass through LowerInv first
+@assert unordered((@qpat [x::Int,y]), (@qpat [x,y::Int]))
+@assert (@qpat [x::Number,y]) > (@qpat [x::Int,y::Int])
+
 @assert (@qpat 1::Float64) == (@qpat ::None)
 @assert (@qpat x::Any) == (@qpat x)
 @assert (@qpat (x::None,z)) == (@qpat ::None)

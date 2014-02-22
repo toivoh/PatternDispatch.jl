@@ -69,26 +69,24 @@ e.g. `show_dispatch(f, (Int,))` prints only the second method, since the first
 one can never be triggered with an argument of type `Int`.
 -->
 
-Signatures can also contain patterns of tuples<!--- and vectors -->:
+Signatures can also contain patterns of tuples and vectors:
 
     @pattern f2((x,y::Int)) = x*y
+    @pattern f2([x,y::Int]) = x/y
     @pattern f2(x)          = nothing
 
     ==> f2((2,5)) = 10
         f2((4,3)) = 12
+        f2([4,3]) = 1.3333333333333333
         f2((4,'a')) = f2({4,'a'}) = f2(1) = f2("hello") = f2((1,)) = f2((1,2,3)) = nothing
 
-<!---
 A vector pattern will match any `Vector`. To restrict to a given
 element type, use e.g.
 
     @pattern f([x,y]::Vector{Int}) = ...
--->
 
 The pattern `p~q` matches a value if and only if 
 it matches both patterns `p` and `q`.
-
-<!---
 This can be used e.g. to get at the actual vector that matched a vector pattern:
 
     @pattern f3(v~[x::Int, y::Int]) = {v,x*y}
@@ -96,7 +94,6 @@ This can be used e.g. to get at the actual vector that matched a vector pattern:
     ==> f3([3,2])   = {[3, 2], 6}
         f3({3,2})   = {{3, 2}, 6}
         f3([3,2.0]) = nothing
--->
 
 Symbols in signatures are replaced by pattern variables by default
 (symbols in the position of function names and at the right hand side of `::`

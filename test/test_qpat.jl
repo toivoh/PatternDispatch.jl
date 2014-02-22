@@ -49,4 +49,9 @@ f(x,y) = x+y
 @show @qpat(f(x,y::Int))
 println()
 
+@show @qpat(v~[x,y::Int,3])
+println()
+@show @qpat([x]::String)
+println()
+
 end

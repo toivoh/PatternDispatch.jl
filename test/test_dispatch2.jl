@@ -84,6 +84,15 @@ end
 @assert j(MyTuple(5))   === 5
 @assert j(MyTuple(5,6)) === (5,6)
 
+@patterns begin
+    k(x) = 1
+    k([x,y]) = (y,x)
+end
+
+@assert k(4) === 1
+@assert k([1]) === 1
+@assert k([2,5]) === (5,2)
+@assert k([2,5,4]) === 1
 
 @patterns begin
     function (@inverse Expr(head))(ex)

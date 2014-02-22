@@ -13,27 +13,27 @@ show_dispatch(f)
 #show_dispatch(f, (Int,))
 
 @pattern f2((x,y::Int)) = x*y
-#@pattern f2([x,y::Int]) = x/y
+@pattern f2([x,y::Int]) = x/y
 @pattern f2(x)          = nothing
 
 println()
 @show f2((2,5))
 @show f2((4,3))
-#@show f2([4,3])
+@show f2([4,3])
 @show f2((4,'a'))
-#@show f2({4,'a'})
+@show f2({4,'a'})
 @show f2(1)
 @show f2("foo")
 @show f2((1,))
 @show f2((1,2,3))
 
-# @pattern f3(v~[x::Int, y::Int]) = {v,x*y}
-# @pattern f3(v) = nothing
+@pattern f3(v~[x::Int, y::Int]) = {v,x*y}
+@pattern f3(v) = nothing
 
-# println()
-# @show f3([3, 2])
-# @show f3({3, 2})
-# @show f3([3, 2.0])
+println()
+@show f3([3, 2])
+@show f3({3, 2})
+@show f3([3, 2.0])
 
 
 @pattern f4($nothing) = 1

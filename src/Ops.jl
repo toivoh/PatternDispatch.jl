@@ -1,7 +1,7 @@
 module Ops
 
 export Head, Calc, Guard
-export Binding, Arg, Source, TupleRef, Call, Inv, Never, EgalGuard, TypeGuard
+export Binding, Arg, Source, TupleRef, Call, Inv, InvVector, Never, EgalGuard, TypeGuard
 export valueof, index_of, Tof
 export keyof, meet
 
@@ -21,6 +21,7 @@ immutable Source   <: Calc; value;  end
 immutable TupleRef <: Calc; k::Int; end
 immutable Call     <: Calc; f::Base.Callable; end
 immutable Inv      <: Calc; f::Base.Callable; nargs::Int; end
+immutable InvVector <: Calc; nargs::Int; end
 
 immutable Never     <: Guard; end
 immutable EgalGuard <: Guard; end

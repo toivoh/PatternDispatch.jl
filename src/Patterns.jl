@@ -162,6 +162,16 @@ function show_pattern(sh::PShow, tilde::Bool, node::Node{Inv}, arg::Node)
     return true
 end
 
+function show_pattern(sh::PShow, tilde::Bool, node::Node{InvVector}, arg::Node)
+    if !(arg === argsof(node)[1]); return false; end
+
+    push!(sh.shown, node)
+    if tilde; print(sh.io, '~'); end
+    print(sh.io, '[')
+    show_pattern(sh, node)
+    print(sh.io, "...]")
+    return true
+end
 
 function reemit!(dest, p::Pattern)
     map = reemit!(dest, p.g)

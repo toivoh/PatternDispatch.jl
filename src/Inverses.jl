@@ -126,5 +126,13 @@ function calc!(c::LowerInv, head::Inv, arg)
     results[:args]
 end
 
+function calc!(c::LowerInv, head::InvVector, arg)
+    emit!(c.sink, TypeGuard(Vector), arg)
+    n_node = calc!(c.sink, Call(length), arg)
+    emit!(c.sink, EgalGuard(), n_node, calc!(c.sink, Source(head.nargs)))
+    elements = [calc!(c.sink, Call(getindex), arg, calc!(c.sink, Source(k))) for k=1:head.nargs]
+    calc!(c.sink, Call(tuple), elements...)
+end
+
 
 end # module
