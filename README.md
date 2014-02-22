@@ -69,6 +69,18 @@ e.g. `show_dispatch(f, (Int,))` prints only the second method, since the first
 one can never be triggered with an argument of type `Int`.
 -->
 
+Repeated variables require each occurence to be the same to match:
+
+    @pattern egal(x, x) = true
+    @pattern egal(x, y) = false
+
+    ==> egal(1,1) = true
+        egal(1,2) = egal(1,1.0) = egal(1,"foo") = false
+        egal("foo","foo") = false
+        (s = "foo"; egal(s,s)) = true
+
+Here, `egal` will work just like the builtin `is` function. Note that equal-content strings are not generally egal.
+
 Signatures can also contain patterns of tuples and vectors:
 
     @pattern f2((x,y::Int)) = x*y
@@ -95,16 +107,24 @@ This can be used e.g. to get at the actual vector that matched a vector pattern:
         f3({3,2})   = {{3, 2}, 6}
         f3([3,2.0]) = nothing
 
+This also allows to create patterns that match circular data structures, e.g. a pattern that only matches a vector made up of itself:
+
+    @pattern f4(v~[v]) = true
+    @pattern f4([v])   = false
+
+    ==> f4([1]) = f4([[1]]) = f4([[[1]]]) = false
+        (v = {1}; v[1] = v; f4(v))        = true
+
 Symbols in signatures are replaced by pattern variables by default
 (symbols in the position of function names and at the right hand side of `::`
 are not). To use the _value_ of a variabe at the point of method definition,
 it can be interpolated into the method signature:
 
-    @pattern f4($nothing) = 1
-    @pattern f4(x)        = 2
+    @pattern f5($nothing) = 1
+    @pattern f5(x)        = 2
 
-    ==> f4(nothing) = 1
-        f4(1) = f4(:x) = f4("hello") = 2
+    ==> f5(nothing) = 1
+        f5(1) = f5(:x) = f5("hello") = 2
 
 A warning is printed if a new definition makes dispatch ambiguous:
 
