@@ -138,6 +138,107 @@ prints
              is ambiguous with   ambiguous((x_B, y_B), z_B).
              Make sure ambiguous(x_A~(x_B, y_B), z_B~(1, z_A)) is defined first.
 
+### Inverse functions ###
+
+Besides the built-in patterns, user defined patterns can be specified in the form of inverse functions, including inverse constructors.
+Inverse functions are allowed for functions with a pure, unique, and side-effect free inverse. Given
+
+    type MyType
+        x
+        y
+    end
+
+we can define the inverse function through
+
+    @pattern function (@inverse MyType(x, y))(mt)
+        mt::MyType
+        x = mt.x
+        y = mt.y
+    end
+
+The body of the inverse function recieves the output of the original function (`mt` in this case) and must assign all of its inputs (`x` and `y` in this case).
+Type type assertion `mt::MyType` works as a guard that the inverse exists only if `mt` is of type `MyType`. With these definitions,
+
+    @pattern f6(MyType(x, y)) = (x,y)
+    @pattern f6(x)            = nothing
+
+    ==> f6(MyType(5,'x')) = (5,'x')
+        f6(11)            = nothing
+
+**Note:** By specifying an inverse function, you are interacting with the internals of the pattern matching machinery. In order not to invalidate the assumptions that it is based on, you must make sure that any inverse function defined satisfies certain properties. In particular, **all steps of the inverse calculation must** 
+
+* be free of side effects, and
+* return egal results when called twice with egal inputs and no side effects in between.
+
+Inverse functions can be overloaded based on the number of arguments. 
+If we add an additional (outer) constructor
+
+    MyType(x) = MyType(x, x)
+
+we should add the inverse to match:
+
+    @pattern function (@inverse MyType(x))(mt)
+        mt::MyType
+        x = mt.x
+        y = mt.y
+        x ~ y
+    end
+
+This inverse will only exist for `mt::MytType` if `mt.x === mt.y`. The expression `x ~ y` guards that `x === y`, and returns the value.
+With the two inverse constructors,
+
+    @pattern f7(MyType(x))   = (1,x)
+    @pattern f7(MyType(x,y)) = (2,x,y)
+
+    ==> f7(MyType('a','a')) = (1,'a')
+        f7(MyType('a','b')) = (2,'a','b')
+
+Inverse functions can be defined also for non-constructors. 
+The inverse of the function
+
+    two_times_int(x::Int) = (@assert (typemin(Int)>>1) <= x <= (typemax(Int)>>1); 2x)
+
+can be expressed as
+
+    @pattern function (@inverse two_times_int(x))(y)
+        y::Int
+        @guard iseven(y)
+        x = y >> 1
+    end
+
+where `@guard iseven(y)` guards that the inverse exists only if `iseven(y)` holds true.
+Then
+
+    @pattern f8(x::Int, y::Int)           = (x,y)
+    @pattern f8(x::Int, two_times_int(x)) = x
+
+    ==> f8(3,5) = (3,5)
+        f8(3,6) = 3
+        f8(4,8) = 4
+
+Inverse functions can even be defined for some multivalued functions (which are not proper functions), when the inverse is unique. Let `odd` be the multivalued function that returns all odd integers. We cannot define this as a function, so we will have to be content with
+
+    odd() = error() # conceptually returns all odd integers
+
+The inverse function, however, can be defined as
+
+    @pattern function (@inverse odd())(x)
+        x::Integer
+        @guard isodd(x)
+    end
+
+Then
+
+    @pattern f9(odd(),     odd())     = "Both odd"
+    @pattern f9(odd(),     ::Integer) = "One odd"
+    @pattern f9(::Integer, odd())     = "One odd"
+    @pattern f9(::Integer, ::Integer) = "Both even"
+
+    ==> f9(3,5) = "Both odd"
+        f9(3,6) = "One odd"
+        f9(4,8) = "Both even"
+
+
 Features
 --------
  * Pattern signatures can contain

@@ -54,6 +54,7 @@ println()
 @show f4([[[1]]])
 @show (v = {1}; v[1] = v; f4(v))
 
+
 @pattern f5($nothing) = 1
 @pattern f5(x)        = 2
 
@@ -66,5 +67,72 @@ println()
 println()
 @pattern ambiguous((x,y),z) = 2
 @pattern ambiguous(x,(1,z)) = 3
+
+
+type MyType
+    x
+    y
+end
+@pattern function (@inverse MyType(x, y))(mt)
+    mt::MyType
+    x = mt.x
+    y = mt.y
+end
+
+@pattern f6(MyType(x, y)) = (x,y)
+@pattern f6(x)            = nothing
+
+println()
+@show f6(MyType(5,'x'))
+@show f6(11)
+
+MyType(x) = MyType(x, x)
+@pattern function (@inverse MyType(x))(mt)
+    mt::MyType
+    x = mt.x
+    y = mt.y
+    x ~ y
+end
+
+@pattern f7(MyType(x))   = (1,x)
+@pattern f7(MyType(x,y)) = (2,x,y)
+
+println()
+@show f7(MyType('a','a'))
+@show f7(MyType('a','b'))
+
+
+two_times_int(x::Int) = (@assert (typemin(Int)>>1) <= x <= (typemax(Int)>>1); 2x)
+@pattern function (@inverse two_times_int(x))(y)
+    y::Int
+    @guard iseven(y)
+    x = y >> 1
+end
+
+@pattern f8(x::Int, y::Int)           = (x,y)
+@pattern f8(x::Int, two_times_int(x)) = x
+
+println()
+@show f8(3,5)
+@show f8(3,6)
+@show f8(4,8)
+
+
+odd() = error() # conceptually returns all odd integers
+@pattern function (@inverse odd())(x)
+    x::Integer
+    @guard isodd(x)
+end
+
+@pattern f9(odd(),     odd())     = "Both odd"
+@pattern f9(odd(),     ::Integer) = "One odd"
+@pattern f9(::Integer, odd())     = "One odd"
+@pattern f9(::Integer, ::Integer) = "Both even"
+
+println()
+@show f9(3,5)
+@show f9(3,6)
+@show f9(4,8)
+
 
 end # module
