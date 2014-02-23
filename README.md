@@ -244,13 +244,17 @@ Features
  * Pattern signatures can contain
    * variables, literals, and type annotations
    * unifications and tuples of patterns
+   * vector and inverse function patterns
  * Dispatch on most specific pattern
  * Generates dispatch code to find the most specific match for given arguments,
    in the form of nested `if` statements 
- * Leverages Julia's multiple dispatch to perform the initial steps of
-   dispatch
  * Warning when addition of a pattern method causes dispatch ambiguity
  * Function to print generated dispatch code for a pattern function
+
+<!---
+ * Leverages Julia's multiple dispatch to perform the initial steps of
+   dispatch
+-->
 
 Aim
 ---
@@ -266,8 +270,6 @@ Planned/Possible Features
 -------------------------
  * Patterns for arrays and dicts
  * varargs, e.g. `(x,ys...)`, `{x,ys...}` etc.
- * Support for non-tree patterns, where the same variable occurs in several positions
- * User definable pattern matching on user defined types
  * Greater expressiveness: more kinds of patterns...
 
 Limitations
@@ -281,7 +283,7 @@ Semantics:
  * Pattern matching is conceptually performed on the arguments
    tuple of a function call, e.g. `(1,2,3)` in the call `f(1,2,3)`.
  * Equality of values is defined in terms of `is`,
-   e.g. `@pattern f(3) = 5` matches on `f(x)` only if `is(x,3)`.
+   e.g. `@pattern f(3) = 5` matches on `f(x)` only if `is(x,3)` (which can also be written as `x === 3`).
 
 Background:
  * To be able to match a single pattern against a value, 
@@ -304,14 +306,15 @@ Implementation aspects:
    * Each _node_ is either
      * an _operation_, such as to evaluate `isa(x,Int)` or `x[3]`,
        where `x` is the result value of another node, or
-     * a _source_, such as a literal value or the pattern's input value.
+     * a _source_, such as a literal value or the pattern's input value, or
+     * a _guard_, that defines necessary condition for the pattern to match
+       * type guards (guard that `isa(x,T)` for some given type `T`)
+       * egal guards (guard that `x === y`)
    * Two nodes are equal iff they represent the same (sub-)DAG.
  * A pattern is composed of
-   * a set of _guard predicates_ (boolean-valued nodes),
-     such that the pattern matches iff all predicates evaluate to true,
+   * a set of guards,
+     such that the pattern matches iff all guards are satisfied,
    * a set of _bindings_ from symbols to nodes, to produce the mapping.
- * Two patterns are equal iff their guard sets are equal.
  * Pattern intersection `p & q` forms the union of the guards sets
    of `p` and `q`. The result is simplified, e.g.
    `x::Number & ::Int` reduces to `x::Int`.
- * `p >= q` is evaluated as `(p & q) == q`.
