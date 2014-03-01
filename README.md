@@ -16,9 +16,9 @@ Examples
 --------
 Pattern methods are defined using the `@pattern` macro. The method with the most specific pattern that matches the given arguments is invoked, 
 with matching values assigned to the corresponding variables.
-(Among the matching pattern methods, any one that is no less specific than the others may be picked - this will be unique as long as you don't get any ambiguity warnings.)
+(As long as there are no ambiguity warnings, there is always a unique most specific matching pattern. Otherwise, some matching pattern that is no less specific than the others will be picked.)
 
-Method signatures in pattern methods may contain variable names and/or
+Method signatures in pattern methods can contain variable names and/or
 type assertions, just like regular method signatures.
 (Varargs, e.g. `f(x,ys...)` are not implemented yet.)
 A number of additional constructs are also allowed.
@@ -35,7 +35,8 @@ prints
 
     {1, 42, 3, 4}
 
-Using `show_dispatch(f)` to inspect the generated dispatch code gives
+The generated dispatch code can be insoected using `show_dispatch(f)`,
+which gives
 
     const f = (args...)->dispatch(args...)
     
@@ -69,7 +70,7 @@ e.g. `show_dispatch(f, (Int,))` prints only the second method, since the first
 one can never be triggered with an argument of type `Int`.
 -->
 
-Repeated variables require each occurence to be the same to match:
+Repeated variables require each occurence to be the same (according to the `is` function) to match:
 
     @pattern egal(x, x) = true
     @pattern egal(x, y) = false
@@ -92,8 +93,8 @@ Signatures can also contain patterns of tuples and vectors:
         f2([4,3]) = 1.3333333333333333
         f2((4,'a')) = f2({4,'a'}) = f2(1) = f2("hello") = f2((1,)) = f2((1,2,3)) = nothing
 
-A vector pattern will match any `Vector`. To restrict to a given
-element type, use e.g.
+A vector pattern will match any `Vector` with the right elements.
+To restrict the type of the Vector itself, use e.g.
 
     @pattern f([x,y]::Vector{Int}) = ...
 
@@ -118,7 +119,7 @@ This also allows to create patterns that match circular data structures, e.g. a 
 
 Symbols in signatures are replaced by pattern variables by default
 (symbols in the position of function names and at the right hand side of `::`
-are not). To use the _value_ of a variabe at the point of method definition,
+are currently not). To use the _value_ of a variabe at the point of method definition,
 it can be interpolated into the method signature:
 
     @pattern f5($nothing) = 1
@@ -157,7 +158,7 @@ we can define the inverse function through
     end
 
 The body of the inverse function recieves the output of the original function (`mt` in this case) and must assign all of its inputs (`x` and `y` in this case).
-Type type assertion `mt::MyType` works as a guard that the inverse exists only if `mt` is of type `MyType`. With these definitions,
+The type assertion `mt::MyType` works as a guard that the inverse exists only if `mt` is of type `MyType`. With these definitions,
 
     @pattern f6(MyType(x, y)) = (x,y)
     @pattern f6(x)            = nothing
@@ -192,6 +193,8 @@ With the two inverse constructors,
 
     ==> f7(MyType('a','a')) = (1,'a')
         f7(MyType('a','b')) = (2,'a','b')
+
+since the first method of `f7` is more specific than the second one (and should be equally specific as `f7(MyType(x,x))`).
 
 Inverse functions can be defined also for non-constructors. 
 The inverse of the function
