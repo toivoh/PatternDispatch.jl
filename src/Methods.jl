@@ -27,7 +27,7 @@ end
 const nomethod = Method(Pattern(anything), Node[], nothing, nothing)
 
 >=(x::Method, y::Method) = x.sig.intent >= y.sig.intent
-#==(x::Method, y::Method) = x.sig.intent == y.sig.intent
+# ==(x::Method, y::Method) = x.sig.intent == y.sig.intent
 (&)(m::Method,  i::Intension) = m.sig.intent & i
 
 domainof(m::Method) = m.sig.intent
