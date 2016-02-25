@@ -1,7 +1,5 @@
-include(find_in_path("PatternDispatch.jl"))
-
 module TryMultiDispatch
-import Base.>=, Base.add
+import Base.>=, Base.push!
 using PatternDispatch.Patterns, PatternDispatch.Recode, PatternDispatch.Dispatch
 
 abstract DNode
@@ -62,7 +60,7 @@ rebuilder(mt::MethodTable) = (args...)->begin
 
 dispatch(mt::MethodTable, args) = mt.f(args...)
 
-function add(mt::MethodTable, m::Method)
+function push!(mt::MethodTable, m::Method)
     insert!(mt.top, MethodNode(m))
     mt.f = rebuilder(mt)
 end
@@ -82,14 +80,14 @@ create_dispatch(mt::MethodTable) = eval(code_dispatch(mt)) # todo: which eval?
 insert!(at::MethodNode, m::MethodNode) = insert!(Set{MethodNode}(), at, m)
 function insert!(seen::Set{MethodNode}, at::MethodNode, m::MethodNode)
     if has(seen, at); return; end
-    add(seen, at)
+    push!(seen, at)
     if m >= at
         if at >= m 
             at.m = m.m  # at == m
             return true
         end
         # m > at
-        add(m.gt, at)
+        push!(m.gt, at)
         at_above_m = false
     else
         at_above_m = any([insert!(seen, below, m) for below in at.gt])
@@ -97,7 +95,7 @@ function insert!(seen::Set{MethodNode}, at::MethodNode, m::MethodNode)
     if !at_above_m
         if at >= m
             del_each(at.gt, m.gt)
-            add(at.gt, m)
+            push!(at.gt, m)
             at_above_m = true
         end
     end
@@ -112,7 +110,7 @@ firstitem(iter) = next(iter, start(iter))[1]
 subtreeof(m::MethodNode) = (sub = Set{MethodNode}(); addsubtree!(sub, m); sub)
 function addsubtree!(seen::Set{MethodNode}, m::MethodNode)
     if has(seen, m); return; end
-    add(seen, m)
+    push!(seen, m)
     for below in m.gt; addsubtree!(seen, below); end       
 end
 
@@ -200,7 +198,7 @@ m3 = Method((@qpat (x,)),         :3)
 # f = eval(fdef)
 
 mt = MethodTable(:f)
-for m in [m3,m2,m1];  add(mt, m)  end
+for m in [m3,m2,m1];  push!(mt, m)  end
 
 @assert mt.f(5)     == 1
 @assert mt.f("foo") == 2

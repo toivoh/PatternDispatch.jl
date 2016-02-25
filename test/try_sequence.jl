@@ -1,5 +1,3 @@
-include(find_in_path("PatternDispatch.jl"))
-
 module TrySequence
 #import PatternDispatch.Patterns.depsof, PatternDispatch.Patterns.subs
 #using PatternDispatch.Immutable, 

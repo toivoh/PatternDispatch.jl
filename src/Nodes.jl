@@ -103,7 +103,7 @@ end
 adduser(users::Dict, u::Node) = for d in depsof(u); adduser(users, u, d); end
 function adduser(users::Dict, user, dep::Node)
     if !haskey(users, dep); adduser(users, dep); users[dep] = Set() end
-    add!(users[dep], user)
+    push!(users[dep], user)
 end
 
 const typeorder = [Symbol=>1, Length=>2, Egal=>3, Isa=>3, Ref=>4]
@@ -115,7 +115,7 @@ function showpat(io::IO, users::Dict, node::Node)
     if !haskey(users, node); print(io, "::Any"); return end
 
     # printing order: Symbol, Ref, Egal, Isa
-    us = sort(cmp, {users[node]...})
+    us = sort({users[node]...}, lt=cmp)
     k, n = 1, length(us)
     printed = false
     typ = Any

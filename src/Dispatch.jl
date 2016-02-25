@@ -45,7 +45,7 @@ function simplify{M}(top::Node{M}, hull)
     top = copyDAG(top)
 
     # filter out too specific methods
-    keep = Set{M}(filter(m->!(hullof(m) < hull), methodsof(top))...)
+    keep = Set{M}(filter(m->!(hullof(m) < hull), methodsof(top)))
     @assert !isempty(keep)
     raw_filter!(top, keep)
 
@@ -63,7 +63,7 @@ function simplify!{T}(subs::Dict{Node{T},Node{T}}, node::Node{T}, domain)
         end
     end
 
-    node.gt = Set{Node{T}}([simplify!(child, domain) for child in node.gt]...)
+    node.gt = Set{Node{T}}([simplify!(child, domain) for child in node.gt])
     subs[node] = node
 end
 

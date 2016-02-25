@@ -33,7 +33,7 @@ function recode(ex)
                 $(Expr(:typed_dict, :(Symbol=>Node), c.bindings...)))
     end
     syms = Symbol[b.args[1].args[1] for b in c.bindings] 
-    if length(syms) != length(Set{Symbol}(syms...))
+    if length(syms) != length(Set(syms))
         error("@pattern: Non-tree patterns not yet implemented. Use unique argument names.")
     end
     p_ex, syms
@@ -41,6 +41,9 @@ end
 
 recode(c::Context, arg, ex) = push!(c.preds, :(egalpred($arg,$(quot(ex)))))
 recode(c::Context, arg, ex::Symbol) = push!(c.bindings, :($(quot(ex))=>$arg))
+
+const at_tilde_symbol = symbol("@~")
+
 function recode(c::Context, arg, ex::Expr)
     head, args = ex.head, ex.args
     nargs = length(args)
@@ -63,7 +66,7 @@ function recode(c::Context, arg, ex::Expr)
         end
     elseif head === :cell1d
         error("@pattern: use [] for array patterns")
-    elseif head === :call && args[1] == :~
+    elseif head === :macrocall && args[1] == at_tilde_symbol
         for p in args[2:end]; recode(c, arg, p); end
     elseif head === :$ && nargs == 1
         push!(c.preds, :(egalpred($arg, $(esc(args[1])))))
