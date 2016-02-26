@@ -33,11 +33,11 @@ Signatures can contain a mixture of variables and literals, e.g.
     @pattern f(x) =  x
     @pattern f(2) = 42
 
-    println({f(x) for x=1:4})
+    println([f(x) for x=1:4])
 
 prints
 
-    {1, 42, 3, 4}
+    [1, 42, 3, 4]
 
 Using `show_dispatch(f)` to inspect the generated dispatch code gives
 
@@ -81,7 +81,7 @@ Signatures can also contain patterns of tuples and vectors:
     ==> f2((2,5)) = 10
         f2((4,3)) = 12
         f2([4,3]) = 1.3333333333333333
-        f2((4,'a')) = f2({4,'a'}) = f2(1) = f2("hello") = f2((1,)) = f2((1,2,3)) = nothing
+        f2((4,'a')) = f2([4,'a']) = f2(1) = f2("hello") = f2((1,)) = f2((1,2,3)) = nothing
 
 A vector pattern will match any `Vector`. To restrict to a given
 element type, use e.g.
@@ -92,11 +92,11 @@ The pattern `p~q` matches a value if and only if
 it matches both patterns `p` and `q`.
 This can be used e.g. to get at the actual vector that matched a vector pattern:
 
-    @pattern f3(v~[x::Int, y::Int]) = {v,x*y}
+    @pattern f3(v~[x::Int, y::Int]) = [v,x*y]
 
-    ==> f3([3,2])   = {[3, 2], 6}
-        f3({3,2})   = {{3, 2}, 6}
-        f3([3,2.0]) = nothing
+    ==> f3([3,2])    = [[3, 2], 6]
+        f3(Any[3,2]) = [Any[3, 2], 6]
+        f3([3,2.0])  = nothing
 
 Symbols in signatures are replaced by pattern variables by default
 (symbols in the position of function names and at the right hand side of `::`
@@ -146,7 +146,7 @@ Aim
 Planned/Possible Features
 -------------------------
  * Patterns for arrays and dicts
- * varargs, e.g. `(x,ys...)`, `{x,ys...}` etc.
+ * varargs, e.g. `(x,ys...)`, `[x,ys...]` etc.
  * Support for non-tree patterns, where the same variable occurs in several positions
  * User definable pattern matching on user defined types
  * Greater expressiveness: more kinds of patterns...
