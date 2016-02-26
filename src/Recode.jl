@@ -21,7 +21,7 @@ type Context
     code::Vector
     preds::Vector
     bindings::Vector
-    Context() = new({}, {}, {})
+    Context() = new([], [], [])
 end
 
 function recode(ex)
@@ -55,7 +55,7 @@ function recode(c::Context, arg, ex::Expr)
             push!(c.preds, :( typepred($arg, $(esc(args[2]))) ))
             recode(c, arg, args[1])
         end
-    elseif head === :tuple || head === :vcat
+    elseif head === :tuple || head === :vect
         argtype = (head === :tuple) ? Tuple : Vector
         push!(c.preds, :( typepred($arg, $(quot(argtype))) ))
         push!(c.preds, :( egalpred(lengthnode($arg), $(quot(nargs))) ))

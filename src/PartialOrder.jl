@@ -1,6 +1,6 @@
 
 module PartialOrder
-export Node, insert!, subDAGof, ordered_subDAGof, copyDAG, raw_filter!
+export subDAGof, ordered_subDAGof, copyDAG, raw_filter!
 
 type Node{T}
     value::T
@@ -11,7 +11,7 @@ type Node{T}
 end
 Node{T}(value::T) = Node{T}(value)
 
-copyDAG{T}(top::Node{T}) = copyDAG((Node{T}=>Node{T})[], top)
+copyDAG{T}(top::Node{T}) = copyDAG(Dict{Node{T},Node{T}}(), top)
 function copyDAG{T}(subs::Dict{Node{T},Node{T}}, node::Node{T})
     if haskey(subs, node); return subs[node] end
     
@@ -46,7 +46,7 @@ function addsubDAG!{T}(seen::Set{Node{T}},order::Vector{Node{T}},node::Node{T})
 end
 
 
-insert!{T}(at::Node{T}, node::Node{T}) = insert!((Node{T}=>Bool)[], at, node)
+insert!{T}(at::Node{T}, node::Node{T}) = insert!(Dict{Node{T},Bool}(), at, node)
 function insert!{T}(seen::Dict{Node{T},Bool}, at::Node{T}, node::Node{T})
     if haskey(seen, at); return seen[at] end
     if node.value >= at.value
@@ -58,7 +58,7 @@ function insert!{T}(seen::Dict{Node{T},Bool}, at::Node{T}, node::Node{T})
         push!(node.gt, at)
         at_above_node = false
     else
-        at_above_node = any([insert!(seen, below, node) for below in at.gt])
+        at_above_node = any(Bool[insert!(seen, below, node) for below in at.gt])
     end
     if !at_above_node
         if at.value >= node.value

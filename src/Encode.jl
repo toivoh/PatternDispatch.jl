@@ -11,7 +11,7 @@ export code_dispatch, seq_dispatch!
 
 type Result{T} <: Node{T}
     node::Node{T}
-    name::Union(Symbol,Nothing)
+    name::Union{Symbol,Void}
     nrefs::Int
     ex
     
@@ -66,7 +66,7 @@ function seq_dispatch!(d::DNode, methods, hullT::Tuple)
     results = ResultsDict()
     for pred in predsof(intension(hullT)); preguard!(results, Guard(pred)); end
 
-    argsyms = {}
+    argsyms = []
     for k=1:length(hullT)
         node, name = Nodes.refnode(Nodes.argnode, k), nothing
         for method in methods
@@ -117,7 +117,7 @@ function code_dispatch(::NoMethodNode)
 end
 function code_dispatch(m::MethodCall)
     prebind = encoded(m.bind_seq)
-    args = {resultof(node) for node in m.bindings}
+    args = Any[resultof(node) for node in m.bindings]
     blockwrap(prebind...,
          Expr(:call, quot(m.m.body), args...))
 end
@@ -133,13 +133,13 @@ end
 # ---- generate code from (instantiated) node sequence ------------------------
 
 function code_predicate(seq::Vector{Node})
-    code = {}
+    code = []
     pred = nothing
     for node in seq
         if isa(node, Guard)
             factor = isempty(code) ? node.pred.ex : Expr(:block, code..., node.pred.ex)
             pred = pred === nothing ? factor : (:($pred && $factor))
-            code = {}
+            code = []
         else
             encode!(code, node)
         end
@@ -148,7 +148,7 @@ function code_predicate(seq::Vector{Node})
 end
 
 function encoded(seq::Vector{Node})
-    code = {}
+    code = []
     for node in seq;  encode!(code, node);  end
     code
 end

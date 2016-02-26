@@ -5,7 +5,7 @@ using PatternDispatch
 
 @pattern f(x::Int) = x^2
 @pattern f(3)      = 3
-@pattern f(x~::String) = 5
+@pattern f(x~::AbstractString) = 5
 
 @assert [f(x) for x=1:4] == [1,4,3,16]
 @assert f("foo") == 5
@@ -27,24 +27,24 @@ using PatternDispatch
 @assert g2((2,6)) == (2,6)
 
 
-@pattern h(x,(y,z))     = {x,y,z}
-@pattern h((x,y),(z,w)) = {x,y,z,w}
-@pattern h((x,y),z)     = {x,y,z}
+@pattern h(x,(y,z))     = Any[x,y,z]
+@pattern h((x,y),(z,w)) = Any[x,y,z,w]
+@pattern h((x,y),z)     = Any[x,y,z]
 
 @assert h((1,2),(3,4)) == [1,2,3,4]
 @assert h(1,(2,3))     == [1,2,3]
 @assert h((1,2),3)     == [1,2,3]
-@assert h((1,2),[3,4]) == {1,2,[3,4]}
+@assert h((1,2),[3,4]) == Any[1,2,[3,4]]
 
 
-@pattern h2(x,[y,z])     = {x,y,z}
-@pattern h2([x,y],[z,w]) = {x,y,z,w}
-@pattern h2([x,y],z)     = {x,y,z}
+@pattern h2(x,[y,z])     = Any[x,y,z]
+@pattern h2([x,y],[z,w]) = Any[x,y,z,w]
+@pattern h2([x,y],z)     = Any[x,y,z]
 
 @assert h2([1,2],[3,4]) == [1,2,3,4]
 @assert h2(1,[2,3])     == [1,2,3]
 @assert h2([1,2],3)     == [1,2,3]
-@assert h2([1,2],(3,4)) == {1,2,(3,4)}
+@assert h2([1,2],(3,4)) == Any[1,2,(3,4)]
 
 
 @pattern l(::Any)    = 1

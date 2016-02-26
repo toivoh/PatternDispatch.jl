@@ -14,9 +14,9 @@ export @pattern, show_dispatch
 type Method
     sig::Pattern
     bindings::Vector{Node}
-    body::Union(Function,Nothing)
+    body::Union{Function,Void}
     body_ex
-    hullT::Tuple
+    hullT::Union{Tuple,Void}
     id::Int
 
     function Method(sig::Pattern, bs, body, body_ex)
@@ -31,7 +31,7 @@ const nomethod = Method(Pattern(anything), Node[], nothing, nothing)
 (&)(m::Method,  i::Intension) = m.sig.intent & i
 
 domainof(m::Method) = m.sig.intent
-hullof(m::Method)   = intension(m.hullT)
+hullof(m::Method)   = m.hullT === nothing ? anything : intension(m.hullT)
 signatureof(m::Method)         = m.sig
 signatureof(m::Method, suffix) = suffix_bindings(m.sig, suffix)
 
@@ -65,7 +65,7 @@ type MethodTable
     f::Function
 
     function MethodTable(name::Symbol) 
-        mt = new(name, MethodNode(nomethod), false, (Tuple=>Any)[], 0)
+        mt = new(name, MethodNode(nomethod), false, Dict{Tuple,Any}(), 0)
         mt.f = eval(:(let
                 function $name(args...)
                     compile!($(quot(mt)))
@@ -98,7 +98,9 @@ function compile!(mt::MethodTable)
     # avoids ambiguity warnings from julia as long
     # as there is no ambiguity among the patterns.
     methods = methodsof(mt)
-    hullTs = Tuple[m.hullT for m in filter(m->(m != nomethod), methods)]
+#    hullTs = Tuple[m.hullT for m in filter(m->(m != nomethod), methods)]
+    # Each element is a Tuple, but how to express that to the comprehension?
+    hullTs = [m.hullT for m in filter(m->(m != nomethod), methods)]
     
     compiled = Set{Tuple}()
     for hullT in reverse(hullTs)
@@ -116,7 +118,7 @@ function compile!(mt::MethodTable, methods::Vector{Method}, hullT::Tuple)
     argsyms = seq_dispatch!(dtree, methods, hullT)
     code    = code_dispatch(dtree)
 
-    args = {:($argsym::$(quot(T))) for (argsym,T) in zip(argsyms,hullT)}    
+    args = Any[:($argsym::$(quot(T))) for (argsym,T) in zip(argsyms,hullT)]
     fdef = Expr(:function, :( $(mt.name)($(args...)) ), code)
     mt.julia_methods[hullT] = Expr(:function, :( dispatch($(args...)) ), code)
 
@@ -128,15 +130,15 @@ end
 
 show_dispatch(mt::MethodTable, args...) = show_dispatch(STDOUT, 
                                                         mt, args...)
-show_dispatch(io::IO, mt::MethodTable) = show_dispatch(io, mt, Tuple)
-function show_dispatch(io::IO, mt::MethodTable, Ts::Tuple) 
+show_dispatch(io::IO, mt::MethodTable) = show_dispatch(io, mt, nothing)
+function show_dispatch(io::IO, mt::MethodTable, Ts::Union{Tuple,Void}) 
     if !mt.compiled;  compile!(mt)  end
 
     println("const ", mt.name, " = (args...)->dispatch(args...)")
 
     println("\n# ---- Pattern methods: ----")
     methods = methodsof(mt)
-    mnames = (Function=>Symbol)[]
+    mnames = Dict{Function,Symbol}()
     for (id, method) in sort([(m.id, m) for m in methods])
         if method === nomethod; continue end
 
@@ -158,7 +160,7 @@ function show_dispatch(io::IO, mt::MethodTable, Ts::Tuple)
 
     println("# ---- Dispatch methods: ----")
     for (f_Ts, fdef) in mt.julia_methods
-        if f_Ts <: Ts
+        if (Ts === nothing) || (Tuple{f_Ts...} <: Tuple{Ts...})
             Base.show_unquoted(io, subs_ex(subs_invocation, fdef))
             print(io, "\n\n")
         end

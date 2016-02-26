@@ -1,6 +1,7 @@
 
 module Dispatch
 using ..PartialOrder
+using ..PartialOrder: Node, insert!
 
 export DNode, Decision, MethodCall, NoMethodNode
 export domainof, signatureof, make_namer
@@ -53,7 +54,7 @@ function simplify{M}(top::Node{M}, hull)
     top = simplify!(top, hull)
 end
 
-simplify!{T}(n::Node{T}, domain) = simplify!((Node{T}=>Node{T})[], n, domain)
+simplify!{T}(n::Node{T}, domain) = simplify!(Dict{Node{T},Node{T}}(), n, domain)
 function simplify!{T}(subs::Dict{Node{T},Node{T}}, node::Node{T}, domain)
     if haskey(subs, node);  return subs[node]  end
     ndom = node.value & domain

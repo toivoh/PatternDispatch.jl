@@ -8,7 +8,7 @@ const new_interned = gensym("new_interned")
 function replace_new(ex::Expr)
     if ex.head === :quote; return ex; end
 
-    args = {replace_new(arg) for arg in ex.args}
+    args = Any[replace_new(arg) for arg in ex.args]
     if (ex.head === :call) && args[1] == :new
         return Expr(:call, new_interned, args[2:end]...)
     end
@@ -23,9 +23,10 @@ function code_interned(ex)
     @expect is_expr(ex, :type, 3)
     imm, typesig, typebody = ex.args    
     typeex = (is_expr(typesig, :(<:), 2) ? typesig.args[1] : typesig)
-    typename = (is_expr(typeex, :curly) ? typeex.args[1] : typeex)::Symbol
+    typename =   (is_expr(typeex, :curly) ? typeex.args[1] : typeex)::Symbol
+    typeparams = (is_expr(typeex, :curly) ? typeex.args[2:end] : [])
 
-    fields, types, sigs, defs = Symbol[], {}, {}, {}
+    fields, types, sigs, defs = Symbol[], [], [], []
     needs_default_constructor = true
     for def in typebody.args
         if isa(def, Symbol)
@@ -48,8 +49,8 @@ function code_interned(ex)
     end
     
     objects = ObjectIdDict()
-    push!(defs, :($new_interned($(sigs...)) = 
-                  @get!($(quot(objects)),($(fields...),), new($(fields...))) ))
+    push!(defs, :($new_interned{$(typeparams...)}($(sigs...)) = 
+                  @get!($(quot(objects)),($(fields...),), new{$(typeparams...)}($(fields...))) ))
     if needs_default_constructor
         push!(defs, :( $typename($(sigs...)) = $new_interned($(fields...)) ))
     end

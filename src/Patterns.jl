@@ -25,7 +25,7 @@ depsof(node::Atom) = []
 const never  = Atom(false)
 const always = Atom(true)
 
-@interned type Guard <: Node{None}
+@interned type Guard <: Node{Union{}}
     pred::Predicate
 end
 subs(d::Dict, node::Guard) = Guard(d[node.pred])
@@ -40,8 +40,8 @@ type Intension
 end
 
 #const naught   = Intension((Node=>Predicate)[argnode => never])
-const naught   = Intension((Node=>Predicate)[always => never])
-const anything = Intension((Node=>Predicate)[])
+const naught   = Intension(Dict(always => never))
+const anything = Intension(Dict{Node,Predicate}())
 
 predsof(x::Intension) = values(x.factors)
 
@@ -93,7 +93,7 @@ function (&)(p::Pattern, q::Pattern)
     Pattern(p.intent & q.intent, bindings)
 end
 
-function suffix_bindings(p::Pattern, suffix::String)
+function suffix_bindings(p::Pattern, suffix::AbstractString)
     Pattern(p.intent, (Symbol=>Node)[symbol(string(name, suffix)) => node
                                      for (name,node) in p.bindings])
 end

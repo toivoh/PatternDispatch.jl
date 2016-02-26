@@ -22,15 +22,15 @@ refnode(   arg::Node, index::Int) = Ref(arg, index)
 lengthnode(arg::Node)             = Length(arg)
 egalpred(  arg::Node, value)      = Egal(arg, Atom(value))
 
-typepred(arg::Node, ::Type{Any})  = always
-typepred(arg::Node, ::Type{None}) = never
-typepred(arg::Node, typ)          = Isa(arg, typ)
+typepred(arg::Node, ::Type{Any})     = always
+typepred(arg::Node, ::Type{Union{}}) = never
+typepred(arg::Node, typ)             = Isa(arg, typ)
 
 indof(node::Ref) = node.index
 eqof(node::Egal) = node.eq
 Tof(node::Isa)   = node.typ
 
-subs(d::Dict, node::Union(Arg, Atom)) = node
+subs(d::Dict, node::Union{Arg, Atom}) = node
 subs(d::Dict, node::Ref)    = Ref(   d[node.arg], node.index)
 subs(d::Dict, node::Length) = Length(d[node.arg])
 subs(d::Dict, node::Egal)   = Egal(  d[node.arg], d[node.eq])
@@ -60,7 +60,7 @@ samearg(n::Node, m::Node) = @assert n.arg===m.arg
 
 depsof(node::Arg) = []
 depsof(node::Egal) = Node[node.arg, node.eq]
-depsof(node::Union(Ref, Length, Isa)) = [node.arg]
+depsof(node::Union{Ref, Length, Isa}) = [node.arg]
 
 function depsof(i::Intension, n::Ref)
     Node[n.arg, Guard(i.factors[n.arg]), Guard(i.factors[Length(n.arg)])]
@@ -68,10 +68,9 @@ end
 depsof(i::Intension, node::Length) = Node[node.arg, Guard(i.factors[node.arg])]
 
 function intension(Ts::Tuple)
-    Ts = {Ts...}  # until enumerate supports tuples again
     intension(typepred(argnode, Tuple),
               egalpred(lengthnode(argnode), length(Ts)),
-              {typepred(refnode(argnode, k),T) for (k,T) in enumerate(Ts)}...)
+              Any[typepred(refnode(argnode, k),T) for (k,T) in enumerate(Ts)]...)
 end
 
 get_type(g::Isa)  = Tof(g)
@@ -80,18 +79,18 @@ function get_type(intent::Intension, node::Node)
     haskey(intent.factors, node) ? get_type(intent.factors[node]) : Any
 end
 function julia_signature_of(intent::Intension)
-    if !haskey(intent.factors, argnode);  return Tuple;  end
+    if !haskey(intent.factors, argnode);  return nothing;  end
     garg::Isa = intent.factors[argnode]
     @assert Tof(garg) <: Tuple
     glen::Egal = intent.factors[Length(argnode)]
     nargs = eqof(glen).value
-    tuple({get_type(intent, refnode(argnode, k)) for k=1:nargs}...)
+    tuple(Any[get_type(intent, refnode(argnode, k)) for k=1:nargs]...)
 end
 julia_signature_of(p::Pattern) = julia_signature_of(p.intent)
 
 
 function show(io::IO, p::Pattern)
-    if p.intent === naught; print(io, "::None"); return; end
+    if p.intent === naught; print(io, "::Union{}"); return; end
     
     users = Dict{Node,Set}()
     for (name,arg) in p.bindings; adduser(users, name, arg); end
@@ -106,7 +105,7 @@ function adduser(users::Dict, user, dep::Node)
     push!(users[dep], user)
 end
 
-const typeorder = [Symbol=>1, Length=>2, Egal=>3, Isa=>3, Ref=>4]
+const typeorder = Dict(Symbol=>1, Length=>2, Egal=>3, Isa=>3, Ref=>4)
 cmp(x,y) = typeorder[typeof(x)] < typeorder[typeof(y)]
 cmp(x::Symbol, y::Symbol) = string(x) < string(y)
 cmp(x::Ref,    y::Ref)    = x.index   < y.index
@@ -115,7 +114,7 @@ function showpat(io::IO, users::Dict, node::Node)
     if !haskey(users, node); print(io, "::Any"); return end
 
     # printing order: Symbol, Ref, Egal, Isa
-    us = sort({users[node]...}, lt=cmp)
+    us = sort(collect(users[node]), lt=cmp)
     k, n = 1, length(us)
     printed = false
     typ = Any

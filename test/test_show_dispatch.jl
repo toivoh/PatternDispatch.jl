@@ -5,7 +5,7 @@ using PatternDispatch
 
 # @pattern f(x::Int) = x^2
 # @pattern f(3)      = 3
-# @pattern f(x~::String) = 5
+# @pattern f(x~::AbstractString) = 5
 
 @pattern f(x,y) = 1
 @pattern f(1,y) = 2
