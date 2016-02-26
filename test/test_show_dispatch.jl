@@ -1,5 +1,3 @@
-require("PatternDispatch.jl")
-
 module TestShowDispatch
 using PatternDispatch
 

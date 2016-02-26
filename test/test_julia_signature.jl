@@ -1,5 +1,3 @@
-require("PatternDispatch.jl")
-
 module TestJuliaSignature
 using PatternDispatch.Nodes, PatternDispatch.Recode
 

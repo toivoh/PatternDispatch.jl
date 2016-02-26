@@ -1,5 +1,3 @@
-require("PatternDispatch.jl")
-
 module TestOps
 using PatternDispatch.Patterns, PatternDispatch.Recode
 

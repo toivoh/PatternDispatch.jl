@@ -1,5 +1,3 @@
-require("PatternDispatch.jl")
-
 module TestShowPattern
 using PatternDispatch.Recode
 
@@ -10,8 +8,8 @@ using PatternDispatch.Recode
 println()
 @show (@qpat x::Any)
 @show (@qpat ::Any)
-@show (@qpat ::None)
-@show (@qpat (x::None,y::Int))
+@show (@qpat ::Union{})
+@show (@qpat (x::Union{},y::Int))
 
 println()
 @show (@qpat x)
