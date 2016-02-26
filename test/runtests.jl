@@ -1,2 +1,3 @@
-include("test_ops.jl")
-include("test_dispatch.jl")
+include("silenttests.jl")
+include("othertests.jl")
+
