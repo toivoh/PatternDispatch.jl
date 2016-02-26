@@ -1,4 +1,4 @@
-PatternDispatch.jl v0.1
+PatternDispatch.jl v0.2
 =======================
 Toivo Henningsson
 
