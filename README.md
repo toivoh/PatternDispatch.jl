@@ -14,10 +14,10 @@ In Julia, install the `PatternDispatch` package:
 
 Examples
 --------
-Pattern methods are defined using the `@pattern` macro. The method with the most specific pattern that matches the given arguments is invoked, 
+Pattern methods are defined using the `@pattern` macro. The method with the most specific pattern that matches the given arguments is invoked,
 with matching values assigned to the corresponding variables.
 The pattern method that is invoked is guaranted to be no less specific than
-any other pattern method that matches. 
+any other pattern method that matches.
 Beyond that, no guarantees are made whatsoever about which method is invoked,
 i.e. in the face of ambiguity, any of the most specific methods may be picked
 at any given invocation.
@@ -69,7 +69,7 @@ Using `show_dispatch(f)` to inspect the generated dispatch code gives
 
 A type tuple is allowed as a second argument to `show_dispatch` to restrict
 the set of dispatch methods printed,
-e.g. `show_dispatch(f, (Int,))` prints only the second method, since the first 
+e.g. `show_dispatch(f, (Int,))` prints only the second method, since the first
 one can never be triggered with an argument of type `Int`.
 
 Signatures can also contain patterns of tuples and vectors:
@@ -88,7 +88,7 @@ element type, use e.g.
 
     @pattern f([x,y]::Vector{Int}) = ...
 
-The pattern `p~q` matches a value if and only if 
+The pattern `p~q` matches a value if and only if
 it matches both patterns `p` and `q`.
 This can be used e.g. to get at the actual vector that matched a vector pattern:
 
@@ -127,7 +127,7 @@ Features
    * unifications and tuples of patterns
  * Dispatch on most specific pattern
  * Generates dispatch code to find the most specific match for given arguments,
-   in the form of nested `if` statements 
+   in the form of nested `if` statements
  * Leverages Julia's multiple dispatch to perform the initial steps of
    dispatch
  * Warning when addition of a pattern method causes dispatch ambiguity
@@ -135,10 +135,10 @@ Features
 
 Aim
 ---
- * Provide a powerful and intuitive dispatch mechanism based on pattern 
+ * Provide a powerful and intuitive dispatch mechanism based on pattern
    matching
  * Support a superset of Julia's multiple dispatch
- * Generate fast matching code for a given collection of pattern method 
+ * Generate fast matching code for a given collection of pattern method
    signatures
  * Allow Julia's optimizations such as type inference to work with pattern
    dispatch
@@ -165,22 +165,22 @@ Semantics:
    e.g. `@pattern f(3) = 5` matches on `f(x)` only if `is(x,3)`.
 
 Background:
- * To be able to match a single pattern against a value, 
+ * To be able to match a single pattern against a value,
    the pattern has to provide
    * a _predicate_ to check whether a given value matches,
    * a set of _pattern variable_ symbols,
    * a _mapping_ of input values to pattern variable values, valid for matching patterns.
  * To do most-specific pattern dispatch, patterns must also support
-   * a _partial order_ `p >= q`, 
+   * a _partial order_ `p >= q`,
      read as "p is less specific or equal to q", or
      "x matches q ==> x matches p, for any value x"
-   * an _intersection_ operation `p & q`; 
+   * an _intersection_ operation `p & q`;
      the pattern `p & q` will match those values that match both `p` and `q`.
 
 Implementation aspects:
  * Patterns are represented by
    the operations needed to evaluate the matching predicate
-   and the mapping, in the form of a 
+   and the mapping, in the form of a
    [DAG](http://en.wikipedia.org/wiki/Directed_acyclic_graph).
    * Each _node_ is either
      * an _operation_, such as to evaluate `isa(x,Int)` or `x[3]`,
