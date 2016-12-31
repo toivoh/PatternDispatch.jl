@@ -33,7 +33,7 @@ type Rec
     code::Vector{Any}
     argnames::Set{Symbol}
 
-    Rec() = new({}, Set{Symbol}())
+    Rec() = new([], Set{Symbol}())
 end
 
 function recode(ex, Pex)
@@ -65,7 +65,7 @@ function recode_tuple!(r::Rec, nodesym::Symbol, args::Vector)
     end
 end
 
-const tilde_macro_symbol = symbol("@~")
+const tilde_macro_symbol = Symbol("@~")
 function recode!(r::Rec, nodesym::Symbol, ex::Expr)
     head, args = ex.head, ex.args
     nargs = length(args)
@@ -75,10 +75,10 @@ function recode!(r::Rec, nodesym::Symbol, ex::Expr)
         recode!(r, nodesym, args[3])
     elseif head === :call
         invsym = record!(r, code_invcall(nodesym, args[1], nargs-1))
-        recode_tuple!(r, invsym, args[2:end])            
-    elseif head === :vcat
+        recode_tuple!(r, invsym, args[2:end])
+    elseif head === :vcat || head === :vect
         invsym = record!(r, code_invvector(nodesym, nargs))
-        recode_tuple!(r, invsym, args)                    
+        recode_tuple!(r, invsym, args)
     elseif head === :(::)
         if nargs == 1
             code_typeguard!(r, nodesym, args[1])
@@ -96,7 +96,7 @@ function recode!(r::Rec, nodesym::Symbol, ex::Expr)
         push!(r.code, code_equate(nodesym, sourcenode(ex)))
     else
         error("recode: Unrecognized expr = ", ex)
-    end    
+    end
 end
 
 function recode!(r::Rec, nodesym::Symbol, name::Symbol)
@@ -137,7 +137,7 @@ function recodeinv(vars::Set{Symbol}, ex::Expr)
         end
         push!(vars, args[1]::Symbol)
         :( $(args[1]) = $(recodeinv(vars, args[2])) )
-    elseif head === :macrocall && nargs == 2 && args[1] == symbol("@guard")
+    elseif head === :macrocall && nargs == 2 && args[1] == Symbol("@guard")
         pred = recodeinv(vars, :( $(quot(istrue))($(args[2])) ))
         return code_equate(pred, sourcenode(true))
     elseif head === :(.) && nargs == 2

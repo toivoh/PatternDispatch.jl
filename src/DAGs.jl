@@ -2,11 +2,10 @@ module DAGs
 
 export Node, headof, argsof, depthof, usesof
 export isprimary, iskind, primary_node, active_node, live_node, merged_node
-export keyof
 export DAG, primary_rep
 
 using ..Common.Head
-import ..Common, ..Common.headof
+import ..Common: headof, keyof
 using ..Ops: Calc, EgalGuard, Source
 import ..Common: emit!, calc!, meet
 
@@ -24,19 +23,19 @@ type Node{H<:Head}
     depth::Int
 
     kind::Int
-    rep_or_uses::Union(Set{(Node,Int)}, Node) # Set if kind == primary_node, Node otherwise
+    rep_or_uses::Union{Set{Tuple{Node,Int}}, Node} # Set if kind == primary_node, Node otherwise
 
     function Node(head::H, args::Node...)
         args = Node[args...]
-        depth = length(args)==0 ? 0 : maximum([depthof(arg) for arg in args])+1        
-        node = new(head, args, depth, primary_node, Set{(Node,Int)}())
+        depth = length(args)==0 ? 0 : maximum([depthof(arg) for arg in args])+1
+        node = new(head, args, depth, primary_node, Set{Tuple{Node,Int}}())
         for (k,arg) in enumerate(args); adduse!(arg, (node,k)); end
         node
     end
 end
 Node{H}(head::H, args...) = Node{H}(head, args...)
 
-typealias Use (Node,Int)
+typealias Use Tuple{Node,Int}
 
 function Base.show(io::IO, node::Node)
     print(io, "Node(", headof(node), ", ")
@@ -56,7 +55,7 @@ isprimary(node::Node) = iskind(primary_node, node)
 primary_rep(node::Node) = getrep(primary_node, node)
 #active_rep(node::Node)  = getrep(active_node, node)
 
-headkey(head::Head) = Common.keyof(head)
+headkey(head::Head) = keyof(head)
 headkey(head::Calc) = head
 
 keyof(node::Node) = keyof(node.head, node.args...)
@@ -74,7 +73,7 @@ function setrep!(kind::Int, node::Node, rep::Node)
     node.kind = kind
     node.rep_or_uses  = rep # returns rep
 end
-    
+
 function getrep(kind::Int, node::Node)
     if kind < live_node; node = getrep(kind+1, node); end
     iskind(kind, node) ? node : setrep!(kind+1, node, getrep(kind, node.rep_or_uses::Node))
@@ -142,7 +141,7 @@ function substitute!(g::DAG, kind::Int, from::Node, to::Node)
     # Steal the edges from the arguments that use from, and redirect from to to
     uses = usesof(from)
     setrep!(kind, from, to)
-    for (user,k) in uses; substitute_use!(g, user, k, to); end    
+    for (user,k) in uses; substitute_use!(g, user, k, to); end
 end
 
 function substitute_use!(g::DAG, user::Node, k::Int, to::Node)

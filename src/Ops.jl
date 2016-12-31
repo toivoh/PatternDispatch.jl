@@ -3,7 +3,7 @@ module Ops
 export Head, Calc, Guard
 export Binding, Arg, Source, TupleRef, Call, Inv, InvVector, Never, EgalGuard, TypeGuard
 export valueof, index_of, Tof
-export keyof, meet
+export meet
 
 using ..Common: Head, headof
 import ..Common: keyof, meet
@@ -25,7 +25,7 @@ immutable InvVector <: Calc; nargs::Int; end
 
 immutable Never     <: Guard; end
 immutable EgalGuard <: Guard; end
-immutable TypeGuard <: Guard; T::Union(Type, Tuple); end # T must be a type
+immutable TypeGuard <: Guard; T::Union{Type, Tuple}; end # T must be a type
 
 keyof(::TypeGuard) = TypeGuard  # Disregard T
 meet(h1::TypeGuard, h2::TypeGuard) = TypeGuard(typeintersect(h1.T, h2.T))

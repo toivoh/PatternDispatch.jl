@@ -14,13 +14,13 @@ function code_invdef(invsig, body)
     invarg = invsig.args[2]
     inv = invsig.args[1]
     @assert isexpr(inv, :macrocall, 2)
-    @assert inv.args[1] === symbol("@inverse")
+    @assert inv.args[1] === Symbol("@inverse")
     sig = inv.args[2]
     @assert isexpr(sig, :call)
     @assert length(sig.args) >= 1
     fname = sig.args[1]::Symbol
     fargs = sig.args[2:end]
-    
+
     fargnames = [(isexpr(farg, :(::)) ? farg.args[1] : farg)::Symbol for farg in fargs]
 
     # parse/recode body
@@ -37,7 +37,7 @@ function code_invdef(invsig, body)
     reccode = isexpr(recbody, :block) ? recbody.args : [recbody]
     # NB: this code can not declare any locals at top level since several copies may be
     # emitted in one block by @patterns
-    quote        
+    quote
         # we need the let to protect later code from variables created in reccode, including fname
         nodeseq = $(esc( :( let
             $sinksym = $(quot(NodeSeq))()
@@ -62,7 +62,7 @@ end
 immutable NodeSeq
     nodes::Vector{Node}
     bindings::Dict{Symbol,Int}
-    NodeSeq() = new([Node(Arg())], (Symbol=>Int)[]) # ensure node 1 is Arg
+    NodeSeq() = new([Node(Arg())], Dict{Symbol,Int}()) # ensure node 1 is Arg
 end
 
 function emit!(seq::NodeSeq, b::Binding, arg::Int)
@@ -92,11 +92,11 @@ function reemit!(sink, seq::NodeSeq, argnode)
         else;               emit!(sink, head, args...); results[k] = nothing
         end
     end
-    [key => results[index] for (key, index) in seq.bindings]
+    Dict(key => results[index] for (key, index) in seq.bindings)
 end
 
 
-const inverses = Dict{(Base.Callable, Int), NodeSeq}()
+const inverses = Dict{Tuple{Base.Callable, Int}, NodeSeq}()
 
 function setinverse(f::Base.Callable, nargs::Int, nodeseq::NodeSeq)
     if haskey(inverses, (f, nargs))

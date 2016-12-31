@@ -8,7 +8,7 @@ using Base.Meta
 using ..Patterns
 using ..Methods, ..Methods.Method
 using ..Inverses
-    
+
 
 split_fdef_error(f) = error("expected function definition, got\n$f")
 function split_fdef(fdef::Expr)
@@ -44,7 +44,7 @@ end
 
 function code_patterns(blockex)
     @assert isexpr(blockex, :block)
-    code = {}
+    code = []
     for fdef in blockex.args
         if isexpr(fdef, :line) || isa(fdef, LineNumberNode); continue; end
         push!(code, code_pattern(fdef)) # todo: let code_pattern now it's invoked from @patterns?
@@ -59,7 +59,7 @@ macro patterns(ex)
 end
 
 type PatternFunction
-    mt::MethodTable
+    mt::Methods.MethodTable
     f::Function # dispatch function
 
     dispatch_ex
@@ -68,7 +68,7 @@ type PatternFunction
         f = @eval let
             $name(args...) = error($("No methods defined for pattern function $name"))
         end
-        new(MethodTable(name), f)
+        new(Methods.MethodTable(name), f)
     end
 end
 
@@ -81,8 +81,7 @@ end
 function compile!(pf::PatternFunction)
     fdef = encode(pf.mt)
     pf.dispatch_ex = fdef # save it here for now
-    @eval let
-        const dispatch = $(quot(pf.f))
+    pf.f = @eval let
         $fdef
     end
 end
@@ -91,7 +90,7 @@ const pattern_functions = Dict{Function,PatternFunction}()
 
 function create_pattern_function(name::Symbol, method::Method)
     pf = PatternFunction(name)
-    f = @eval (args...)->$(pf.f)(args...)            
+    f = (args...)-> pf.f(args...)
     pattern_functions[f] = pf
     addmethod!(pf, method)
     f
@@ -115,14 +114,14 @@ function code_methoddef(fname::Symbol, args::Vector, body)
         end
         if !wasbound; const $f = create_pattern_function($(quot(fname)), method)
         else;         add_pattern_method!(f, method)
-        end        
+        end
     end
 end
 
 function code_pattern(fdef)
     sig, body = split_fdef(fdef)
     fex = sig.args[1]
-    if isexpr(fex, :macrocall, 2) && fex.args[1] === symbol("@inverse")
+    if isexpr(fex, :macrocall, 2) && fex.args[1] === Symbol("@inverse")
         code_invdef(sig, body)
     elseif isa(fex, Symbol)
         code_methoddef(fex, sig.args[2:end], body)
@@ -136,7 +135,7 @@ macro pattern(fdef)
 end
 
 
-show_dispatch(f::Union(Function,PatternFunction), args...) = show_dispatch(STDOUT, f, args...)
+show_dispatch(f::Union{Function,PatternFunction}, args...) = show_dispatch(STDOUT, f, args...)
 function show_dispatch(io::IO, f::Function, args...)
     if !haskey(pattern_functions, f); error("$f is not a pattern function"); end
     show_dispatch(io, pattern_functions[f], args...)
@@ -148,12 +147,12 @@ function show_dispatch(io::IO, pf::PatternFunction)
 
     println("\n# ---- Pattern methods: ----")
     methods = methodsof(mt)
-    mnames = (Function=>Symbol)[]
+    mnames = Dict{Function,Symbol}()
     for (id, method) in sort([(m.id, m) for m in methods])
         if method.f == nothing; continue end
 
         println(io, "# ", mt.name, method.p_orig)
-        mname = symbol(string("match", method.id))
+        mname = Symbol(string("match", method.id))
         mnames[method.f] = mname
 
         Base.show_unquoted(io, Expr(:function, :($mname($(method.argnames...))), method.body_ex))
@@ -169,7 +168,7 @@ function subs_qcall(subs::Dict, ex)
     if isexpr(ex, :quote)
         get(subs, ex.args[1], ex)
     else
-        isa(ex, Expr) ? Expr(ex.head, {subs_qcall(subs,a) for a in ex.args}...) : ex
+        isa(ex, Expr) ? Expr(ex.head, [subs_qcall(subs,a) for a in ex.args]...) : ex
     end
 end
 

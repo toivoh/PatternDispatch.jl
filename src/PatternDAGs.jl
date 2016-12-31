@@ -5,10 +5,11 @@ export TGof, tgkey
 
 using ..Common.Head
 using ..Ops
-import ..Common: emit!, calc!, branch!, reemit!
+import ..Common: emit!, calc!, branch!, reemit!, keyof
 using ..DAGs
+import Base: <=, >=, <, >, ==, &
 
-argof(node::Union(Node{TypeGuard},Node{TupleRef})) = argsof(node)[1]
+argof(node::Union{Node{TypeGuard},Node{TupleRef}}) = argsof(node)[1]
 tgkey(node::Node) = keyof(TypeGuard(Any), node)
 
 TGof(g, node::Node) = (key = tgkey(primary_rep(node)); haskey(g, key) ? Tof(headof(g[key])) : Any)
@@ -29,7 +30,7 @@ hasnode(g::Graph, head, args::Node...) = haskey(g, keyof(head, args...))
 branch!(g::Graph) = (g2 = Graph(); reemit!(g2, g); g2)
 
 function emit!(g::Graph, head::Head, args::Node...)
-    if head === TypeGuard(None); never!(g); end # todo: avoid having to place it here?
+    if head === TypeGuard(Union{}); never!(g); end # todo: avoid having to place it here?
     emit!(g.g,head,args...)
     simplify!(g)
     nothing
@@ -58,7 +59,7 @@ nevermatches(g::Graph) = hasnode(g, Never())
 never!(g::Graph) = (emit!(g, Never()); nothing)
 
 visit!(g::Graph, node::Node) = nothing
-visit!(g::Graph, node::Node{TypeGuard}) = (if Tof(headof(node)) == None; never!(g); end)
+visit!(g::Graph, node::Node{TypeGuard}) = (if Tof(headof(node)) == Union{}; never!(g); end)
 # NB: assumes all nodes that become secondary end up in updated
 visit!(g::Graph, node::Node{Source}) = (if !(primary_rep(node) === node); never!(g); end)
 
@@ -67,14 +68,14 @@ function simplify!(g::Graph)
         node = pop!(g.g.updated)
         if !iskind(active_node, node); continue; end
         visit!(g, node)
-    end    
+    end
 end
 
 
 
 # Lookup the node in g corresponding to the head and args of oldnode,
 # using map as a cache. Return nothing if there is no corresponding node in g
-function lookup(g::Graph, map::Dict{Node,Union(Node,Nothing)}, oldnode::Node)
+function lookup(g::Graph, map::Dict{Node,Union{Node,Void}}, oldnode::Node)
     if haskey(map, oldnode); return map[oldnode]; end
 
     head = headof(oldnode)
@@ -103,7 +104,7 @@ function <=(p::Graph, q::Graph)
     elseif nevermatches(q); return false
     end
 
-    map = (Node=>Union(Node,Nothing))[]
+    map = Dict{Node,Union{Node,Void}}()
     for qnode in nodesof(q)
         pnode = lookup(p, map, qnode)
         if !isprimary(qnode) && ((pnode === nothing) ||
@@ -124,12 +125,6 @@ end
 ==(g1::Graph, g2::Graph) = (g1 >= g2) && (g2 >= g1)
 <( g1::Graph, g2::Graph) = g2 > g1
 
-
->=(g1::Graph, g2::Graph) = g2 <= g1
->( g1::Graph, g2::Graph) = (g1 >= g2) && !(g2 >= g1)
-==(g1::Graph, g2::Graph) = (g1 >= g2) && (g2 >= g1)
-<( g1::Graph, g2::Graph) = g2 > g1
-
 (&)(g1::Graph, g2::Graph) = (g = Graph(); reemit!(g, g1); reemit!(g, g2); g)
 
 
@@ -137,7 +132,7 @@ immutable Reemit
     dest
     g::Graph
     map::Dict{Node, Any} # todo: provide type info about results?
-    Reemit(dest, g::Graph) = new(dest, g, (Node=>Any)[])
+    Reemit(dest, g::Graph) = new(dest, g, Dict{Node,Any}())
 end
 
 function reemit!(dest, g::Graph)

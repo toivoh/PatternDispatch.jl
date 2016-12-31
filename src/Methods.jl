@@ -4,6 +4,7 @@ export encode
 
 import Base.>=
 using ..PartialOrder
+import ..PartialOrder: insert!
 using ..Common: emit!, calc!, finish!, branch!, reemit!
 using ..Ops: Arg, Call
 using ..PatternDAGs.nevermatches
@@ -17,7 +18,7 @@ lowerinv(p::Pattern) = (p; q = Pattern(); reemit!(LowerInv(q), p); q)
 type Method
     p_orig::Pattern
     p::Pattern
-    f::Union(Function,Nothing)
+    f::Union{Function,Void}
     argnames::Vector{Symbol}
     id::Int
     body_ex
@@ -39,8 +40,8 @@ type MethodTable
     name::Symbol
     top::MethodNode
     num_methods::Int
-    
-    MethodTable(name::Symbol) = new(name, 
+
+    MethodTable(name::Symbol) = new(name,
         MethodNode(Method(empty_pattern(), nothing, Symbol[], nothing)), 0)
 end
 
@@ -61,7 +62,7 @@ function addmethod!(mt::MethodTable, m::Method)
         lb = m.p.g & mk.p.g
         if nevermatches(lb); continue; end
         if any([ml.p.g == lb for ml in methods]) continue; end
-        
+
         sig1 = Pattern(m.p_orig,  "_A")
         sig2 = Pattern(mk.p_orig, "_B")
 
@@ -75,7 +76,7 @@ function encode(mt::MethodTable)
     seq = CodeSeq()
     encode!(LowerInv(CachedCode(LowerTo(seq))), mt.top, subDAGof(mt.top))
 
-    code = {}
+    code = []
     m = MatchCode(code)
     reemit!(m, seq)
     finish!(m)
@@ -96,7 +97,7 @@ function encode!(sink, top::MethodNode, ms::Set{MethodNode})
         sink_below = branch!(sink)
         ms_below = intersect(subDAGof(pivot), ms)
         encode!(sink_below, pivot, ms_below)
-        setdiff!(ms, ms_below)        
+        setdiff!(ms, ms_below)
     end
 
     args = [nodemap[m.p_orig.bindings[key]] for key in m.argnames]

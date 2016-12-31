@@ -8,7 +8,7 @@ export blockexpr
 using Base.Meta
 using ..Ops
 using ..Patterns
-import ..Common: emit!, calc!, branch!, finish!, reemit!
+import ..Common: emit!, calc!, branch!, finish!, reemit!, keyof
 
 using ..DAGs, ..PatternDAGs
 
@@ -101,7 +101,7 @@ type MatchCode
     dest::Vector{Any}
     current::Vector{Any}
     pred
-    MatchCode(dest) = new(dest, {}, true)
+    MatchCode(dest) = new(dest, [], true)
 end
 
 blockexpr(code::Vector) = length(code) == 1 ? code[1] : Expr(:block, code...)
@@ -128,7 +128,7 @@ function finish!(c::MatchCode)
     c.pred = true; empty!(c.current)
 end
 
-record!(c::MatchCode, ex, ::Nothing)    = record!(c::MatchCode, ex)
+record!(c::MatchCode, ex, ::Void)    = record!(c::MatchCode, ex)
 record!(c::MatchCode, ex)               = record!(c::MatchCode, ex, gensym())
 record!(c::MatchCode, ex, name::Symbol) = (push!(c.current, :( $name = $ex )); name)
 

@@ -86,7 +86,7 @@ emit!(g, EgalGuard(), x, y)
 g = Graph()
 t = calc!(g, Arg())
 @assert !nevermatches(g)
-emit!(g, TypeGuard(None), t)
+emit!(g, TypeGuard(Union{}), t)
 @assert nevermatches(g)
 
 g = Graph()

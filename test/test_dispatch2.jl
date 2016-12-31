@@ -61,18 +61,18 @@ end
 
 type MyTuple
     t::Tuple
-    MyTuple(args...) = new(tuple(args...))
+    MyTuple(args...) = new(args)
 end
 
 @patterns begin
     function (@inverse MyTuple(x))(ex)
         ex::MyTuple
-        t = ex.t::(Any,)
+        t = ex.t::Tuple
         x = t[1]
     end
     function (@inverse MyTuple(x,y))(ex)
         ex::MyTuple
-        t = ex.t::(Any,Any)
+        t = ex.t::Tuple{Any,Any}
         x = t[1]
         y = t[2]
     end

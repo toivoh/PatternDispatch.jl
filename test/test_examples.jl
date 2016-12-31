@@ -1,12 +1,10 @@
-require("PatternDispatch.jl")
-
 module TestExamples
 using PatternDispatch
 
 @pattern f(x) =  x
 @pattern f(2) = 42
 
-println(repr({f(x) for x=1:4}))
+println(repr([f(x) for x=1:4]))
 
 println()
 show_dispatch(f)
@@ -31,18 +29,18 @@ println()
 @show f2((4,3))
 @show f2([4,3])
 @show f2((4,'a'))
-@show f2({4,'a'})
+@show f2([4,'a'])
 @show f2(1)
 @show f2("foo")
 @show f2((1,))
 @show f2((1,2,3))
 
-@pattern f3(v~[x::Int, y::Int]) = {v,x*y}
+@pattern f3(v~[x::Int, y::Int]) = [v,x*y]
 @pattern f3(v) = nothing
 
 println()
 @show f3([3, 2])
-@show f3({3, 2})
+@show f3([3, 2])
 @show f3([3, 2.0])
 
 @pattern f4(v~[v]) = true
@@ -52,7 +50,7 @@ println()
 @show f4([1])
 @show f4([[1]])
 @show f4([[[1]]])
-@show (v = {1}; v[1] = v; f4(v))
+@show (v = [[]]; v[1] = v; f4(v))
 
 
 @pattern f5($nothing) = 1

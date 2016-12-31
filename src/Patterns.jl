@@ -6,18 +6,18 @@ using Base.Meta.quot
 using ..Ops
 using ..DAGs, ..PatternDAGs
 using ..Recode
-import ..Common: emit!, calc!, branch!, reemit!
+import ..Common: emit!, calc!, branch!, reemit!, keyof
 import Base: <=, >=, <, >, ==, &
-
+import ..PatternDAGs: Graph
 
 type Pattern
     g::Graph
     bindings::Dict{Symbol,Node}
     argkeys::Vector{Symbol}
 
-    Pattern() = new(Graph(), (Symbol=>Node)[])
-    function Pattern(p::Pattern, suffix::String)
-        bindings = (Symbol=>Node)[symbol("$key$suffix") => node for (key,node) in p.bindings]
+    Pattern() = new(Graph(), Dict{Symbol,Node}())
+    function Pattern(p::Pattern, suffix::AbstractString)
+        bindings = Dict{Symbol,Node}(Symbol("$key$suffix") => node for (key,node) in p.bindings)
         new(p.g, bindings, Symbol[])
     end
 end
@@ -67,30 +67,21 @@ end
 
 function show_pattern(io::IO, p::Pattern)
     if nevermatches(p.g)
-        print(io, "::None")
+        print(io, "nothing")
         return
     end
 
     # Create mapping node => names
-    names = (Node=>Vector{Symbol})[]
+    names = Dict{Node,Vector{Symbol}}()
     for (name, node) in p.bindings
         node = primary_rep(node)
         if haskey(names, node); push!(names[node], name)
         else                    names[node] = Symbol[name]
         end
     end
-    
+
     sh = PShow(io, p, names, Set{Node}())
     show_pattern(sh, p.g[keyof(Arg())])
-
-    for node in nodesof(p.g)
-        # This might not catch all cases of unprinted pattern parts.
-        # What would?
-        if !isa(node, Node{Source}) && !(node in sh.shown) 
-            error("Failed to show node $node")
-#            println("Failed to show node $node")
-        end
-    end
 end
 
 function show_pattern(sh::PShow, node::Node)
@@ -114,7 +105,7 @@ function show_pattern(sh::PShow, node::Node)
 
     for (user,k) in usesof(node)
         if !(user in sh.shown)
-            tilde = bool(tilde | show_pattern(sh, tilde, user, node))
+            tilde = Bool(tilde | show_pattern(sh, tilde, user, node))
         end
     end
 
@@ -127,7 +118,7 @@ end
 function show_pattern(sh::PShow, tilde::Bool, node::Node{TypeGuard}, arg::Node)
     push!(sh.shown, node)
     T = Tof(node)
-    if isa(arg, Node{Source}) && T != None; return false; end
+    if isa(arg, Node{Source}) && T != Union{}; return false; end
     printT = true
 
     if isa(T, Tuple) && !(T[length(T)] <: Vararg)
@@ -139,11 +130,11 @@ function show_pattern(sh::PShow, tilde::Bool, node::Node{TypeGuard}, arg::Node)
         print(sh.io, '(')
         for k=1:n
             key = keyof(TupleRef(k), arg)
-            if haskey(sh.p.g, key); show_pattern(sh, sh.p.g[key]); end 
+            if haskey(sh.p.g, key); show_pattern(sh, sh.p.g[key]); end
             print(sh.io, ',')
             if k < n; print(sh.io, ' '); end
         end
-        print(sh.io, ')')            
+        print(sh.io, ')')
     end
     if printT; print(sh.io, "::", T); end
     return true
@@ -179,10 +170,10 @@ function reemit!(dest, p::Pattern)
     map
 end
 
-function reemit!(dest, p::Pattern, suffix::String)
+function reemit!(dest, p::Pattern, suffix::AbstractString)
     map = reemit!(dest, p.g)
     for (key, node) in p.bindings
-        emit!(dest, Binding(symbol(string(key,suffix))), map[node])
+        emit!(dest, Binding(Symbol(string(key,suffix))), map[node])
     end
     map
 end

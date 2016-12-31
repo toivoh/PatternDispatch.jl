@@ -23,38 +23,38 @@ end
 @assert g2([2,6]) == [2,6]
 
 
-# @patterns begin
-#     g3([x,y]) = x*y
-#     g3(x)     = x
-# end
+@patterns begin
+    g3([x,y]) = x*y
+    g3(x)     = x
+end
 
-# @assert g3(11) == 11
-# @assert g3([2,6]) == 12
-# @assert g3((2,6)) == (2,6)
+@assert g3(11) == 11
+@assert g3([2,6]) == 12
+@assert g3((2,6)) == (2,6)
 
 
 @patterns begin
-    h(x,(y,z))     = {x,y,z}
-    h((x,y),(z,w)) = {x,y,z,w}
-    h((x,y),z)     = {x,y,z}
+    h(x,(y,z))     = [x,y,z]
+    h((x,y),(z,w)) = [x,y,z,w]
+    h((x,y),z)     = [x,y,z]
 end
 
 @assert h((1,2),(3,4)) == [1,2,3,4]
 @assert h(1,(2,3))     == [1,2,3]
 @assert h((1,2),3)     == [1,2,3]
-@assert h((1,2),[3,4]) == {1,2,[3,4]}
+@assert h((1,2),[3,4]) == [1,2,[3,4]]
 
 
-# @patterns begin
-#     h2(x,[y,z])     = {x,y,z}
-#     h2([x,y],[z,w]) = {x,y,z,w}
-#     h2([x,y],z)     = {x,y,z}
-# end
+@patterns begin
+    h2(x,[y,z])     = [x,y,z]
+    h2([x,y],[z,w]) = [x,y,z,w]
+    h2([x,y],z)     = [x,y,z]
+end
 
-# @assert h2([1,2],[3,4]) == [1,2,3,4]
-# @assert h2(1,[2,3])     == [1,2,3]
-# @assert h2([1,2],3)     == [1,2,3]
-# @assert h2([1,2],(3,4)) == {1,2,(3,4)}
+@assert h2([1,2],[3,4]) == [1,2,3,4]
+@assert h2(1,[2,3])     == [1,2,3]
+@assert h2([1,2],3)     == [1,2,3]
+@assert h2([1,2],(3,4)) == [1,2,(3,4)]
 
 
 @patterns begin
